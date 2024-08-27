@@ -38,6 +38,15 @@ int QueryTask::execute(
 
     std::lock_guard<std::mutex> lock( g_list_mutex );
 
+    // Log the input_pubkey_hash
+    INFO_OUTPUT_CONSOLE("Input pubkey_hash: %s", input_pubkey_hash.c_str());
+
+    // Log the current state of g_keyContext_list
+    INFO_OUTPUT_CONSOLE("QueryTask: Current g_keyContext_list size: %ld", g_keyContext_list.size());
+    for (const auto& pair : g_keyContext_list) {
+        INFO_OUTPUT_CONSOLE("Key in g_keyContext_list: %s", pair.first.c_str());
+    }
+
     // Check if there is an alive key context corresponding to pubkey list hash in g_keyContext_list.
     // Return success = false if there is not.
     if ( !g_keyContext_list.count( input_pubkey_hash ) ) {

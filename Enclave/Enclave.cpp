@@ -59,7 +59,7 @@ int ecall_run(
     INFO("--->request_id: %s\n", request_id);
     INFO("--->plain_request: %s\n", plain_request.c_str());
 
-    // Clear context in list if its status is an error or is expired
+    Clear context in list if its status is an error or is expired
     clear_context( KEY_CONTEXT_ALIVE_DURATION );
 
     // Dispatch requests
@@ -225,7 +225,7 @@ _exit:
  * 1. its status is an error
  * 2. its current_time - finished_time > duration
  */
-void clear_context(int duration )
+void clear_context(int duration)
 {
     long current_time = 0;
 
@@ -233,26 +233,37 @@ void clear_context(int duration )
 
     current_time = get_system_time();
 
-    std::lock_guard<std::mutex> lock( g_list_mutex );
+    std::lock_guard<std::mutex> lock(g_list_mutex);
+
+    // Log the current state of g_keyContext_list before clearing
+    INFO_OUTPUT_CONSOLE("clear_context: Current g_keyContext_list size before clearing: %ld", g_keyContext_list.size());
+    for (const auto& pair : g_keyContext_list) {
+        INFO_OUTPUT_CONSOLE("clear_context: Key in g_keyContext_list: %s, status: %d, finished_time: %ld", pair.first.c_str(), pair.second->key_status, pair.second->finished_time);
+    }
 
     // Traverse the list for checking status and duration
-    for ( auto it = g_keyContext_list.begin();
-          it != g_keyContext_list.end(); ) {
+    for (auto it = g_keyContext_list.begin(); it != g_keyContext_list.end(); ) {
         // Free the item if its status is error or unknown
-        if ( it->second->key_status == eKeyStatus_Error ||
-             it->second->key_status == eKeyStatus_Unknown ) {
+        if (it->second->key_status == eKeyStatus_Error || it->second->key_status == eKeyStatus_Unknown) {
+            INFO_OUTPUT_CONSOLE("clear_context: Deleting key %s due to error or unknown status %d", it->first.c_str(), it->second->key_status);
             delete it->second;
-            it = g_keyContext_list.erase( it );
+            it = g_keyContext_list.erase(it);
         }
         // Free item if it is finished and the alive time is bigger than duration
-        else if ( (it->second->key_status == eKeyStatus_Finished) &&
-                  ((current_time - it->second->finished_time) > duration) ) {
-                delete it->second;
-                it = g_keyContext_list.erase( it );
+        else if ((it->second->key_status == eKeyStatus_Finished) && ((current_time - it->second->finished_time) > duration)) {
+            INFO_OUTPUT_CONSOLE("clear_context: Deleting key %s due to duration exceeded, status %d", it->first.c_str(), it->second->key_status);
+            delete it->second;
+            it = g_keyContext_list.erase(it);
         }
         else {
             it++;
         }
+    }
+
+    // Log the current state of g_keyContext_list after clearing
+    INFO_OUTPUT_CONSOLE("clear_context: Current g_keyContext_list size after clearing: %ld", g_keyContext_list.size());
+    for (const auto& pair : g_keyContext_list) {
+        INFO_OUTPUT_CONSOLE("clear_context: Key in g_keyContext_list: %s, status: %d, finished_time: %ld", pair.first.c_str(), pair.second->key_status, pair.second->finished_time);
     }
 
     FUNC_END;
