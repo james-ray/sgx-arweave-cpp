@@ -6,6 +6,7 @@
 #include "tasks/TaskConstant.h"
 #include "tasks/GenerateTask.h"
 #include "tasks/QueryTask.h"
+#include "tasks/CombineSignaturesTask.h"
 
 /**
  * The duration time (s) for the finished context
@@ -29,7 +30,7 @@ int ecall_init()
     // Register TEE tasks
     g_dispatcher.register_task( new GenerateTask() );
     g_dispatcher.register_task( new QueryTask() );
-
+    g_dispatcher.register_task( new CombineSignaturesTask() );
     FUNC_END;
 
     return ret;
@@ -59,7 +60,7 @@ int ecall_run(
     INFO("--->request_id: %s\n", request_id);
     INFO("--->plain_request: %s\n", plain_request.c_str());
 
-    Clear context in list if its status is an error or is expired
+    //Clear context in list if its status is an error or is expired
     clear_context( KEY_CONTEXT_ALIVE_DURATION );
 
     // Dispatch requests

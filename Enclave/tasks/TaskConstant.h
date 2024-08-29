@@ -12,23 +12,23 @@
 /**
  *  TEE tasks type definition
 */
-enum eTaskType
-{
+enum eTaskType {
     /* Add your task types below */
-    eTaskType_Generate  = 101,
-    eTaskType_Query     = 102
+    eTaskType_Generate = 101,
+    eTaskType_Query = 102,
+    eTaskType_CombineSignatures = 103
 };
 
 /**
  *  Key shard status definition
 */
 enum eKeyStatus {
-    eKeyStatus_Unknown      = 0,
-    eKeyStatus_Generating   = 1,    // generating key shard
-    eKeyStatus_Reporting    = 2,    // creating the report
-    eKeyStatus_Callback     = 3,    // doing result callback
-    eKeyStatus_Finished     = 4,    // the task is finished
-    eKeyStatus_Error        = 0xFF
+    eKeyStatus_Unknown = 0,
+    eKeyStatus_Generating = 1,    // generating key shard
+    eKeyStatus_Reporting = 2,    // creating the report
+    eKeyStatus_Callback = 3,    // doing result callback
+    eKeyStatus_Finished = 4,    // the task is finished
+    eKeyStatus_Error = 0xFF
 };
 
 /**
@@ -44,7 +44,8 @@ struct KeyShardContext {
         finished_time = 0;
         key_status = eKeyStatus_Unknown;
     }
-    KeyShardContext( int k_, int l_, int key_bits_ ) {
+
+    KeyShardContext(int k_, int l_, int key_bits_) {
         k = k_;
         l = l_;
         key_bits = key_bits_;
@@ -53,6 +54,7 @@ struct KeyShardContext {
         finished_time = 0;
         key_status = eKeyStatus_Unknown;
     }
+
     int k;
     int l;
     int key_bits;
@@ -62,4 +64,5 @@ struct KeyShardContext {
     eKeyStatus key_status;
     std::string key_meta_hash;
 };
+
 #endif //_TASK_CONSTANT_H_
