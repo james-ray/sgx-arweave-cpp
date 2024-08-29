@@ -60,6 +60,19 @@ private:
      * @return int : return 0 if success, otherwise return an error code.
      */
     int QueryKeyShardState(const std::string & req_id, const std::string & req_body, std::string & resp_body );
+
+    /**
+    * @brief : CombineSignatures in TEE. The CombineSignatures request is handled asynchronously.
+    *          In this function, it creates a child thread to process the key shard generation and replies immediately.
+    *          The kye shards generation result will be sent to webhook address once the request processing is finished.
+    *
+    * @param[in] req_id : the request id corresponding to each HTTP request.
+    * @param[in] req_body : the request body in JSON string format.
+    * @param[out] resp_body : the response body in JSON string format.
+    * @return int : return 0 if success, otherwise return an error code.
+    */
+    int CombineSignatures(const std::string & req_id, const std::string & req_body, std::string & resp_body );
+
 private:
     static std::mutex   s_thread_lock;
     static std::list<ThreadTask*>  s_thread_pool;

@@ -506,3 +506,62 @@ _exit:
     }
     return ret;
 }
+
+int msg_handler::CombineSignatures(
+        const std::string & req_id,
+        const std::string & req_body,
+        std::string & resp_body )
+{
+    int ret = 0;
+    CombineSignaturesParam* req_param = nullptr;
+
+    FUNC_BEGIN;
+
+    // Return if thread pool has no thread resource
+    std::lock_guard<std::mutex> lock(s_thread_lock);
+    if (s_thread_pool.size() >= g_max_thread_task_count) {
+        resp_body = GetMessageReply(false, APP_ERROR_SERVER_IS_BUSY, "TEE service is busy!");
+        return APP_ERROR_SERVER_IS_BUSY;
+    }
+    s_thread_lock.unlock();
+
+    // All parameters must be valid!
+    if (!(req_param = new CombineSignaturesParam(req_body))) {
+        ERROR("Request ID: %s, new CombineSignaturesParam object failed!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_MALLOC_FAILED, "new CombineSignaturesParam object failed!");
+        return APP_ERROR_MALLOC_FAILED;
+    }
+    if (!req_param->check_sig_shares()) {
+        ERROR("Request ID: %s, Signature shares are invalid!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_SIG_SHARES, "Signature shares are invalid!");
+        return APP_ERROR_INVALID_SIG_SHARES;
+    }
+    if (!req_param->check_key_meta()) {
+        ERROR("Request ID: %s, Key meta is invalid!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_KEY_META, "Key meta is invalid!");
+        return APP_ERROR_INVALID_KEY_META;
+    }
+    if (!req_param->check_msg_digest()) {
+        ERROR("Request ID: %s, Message digest is invalid!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_MSG_DIGEST, "Message digest is invalid!");
+        return APP_ERROR_INVALID_MSG_DIGEST;
+    }
+    req_param->request_id_ = req_id;
+
+    // Create a thread for combine signatures task
+    ThreadTask* task = new ThreadTask(CombineSignatures_Task, req_param);
+    if ((ret = task->start()) != 0) {
+        resp_body = GetMessageReply(false, APP_ERROR_FAILED_TO_START_THREAD, "Create task thread failed!");
+        return APP_ERROR_FAILED_TO_START_THREAD;
+    }
+    s_thread_lock.lock();
+    s_thread_pool.push_back(task);
+    s_thread_lock.unlock();
+
+    // return OK
+    resp_body = GetMessageReply(true, 0, "Request has been accepted.");
+
+    FUNC_END;
+
+    return ret;
+}
