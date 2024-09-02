@@ -53,9 +53,14 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
         return TEE_ERROR_INVALID_PARAMETER;
     }
     doc = req_root["doc"].asString();
-    sig_arr = req_root["sig_arr"].asRSASigShareArray();
-    public_key = req_root["public_key"].asRSAPublicKey();
-    key_meta = req_root["key_meta"].asRSAKeyMeta();
+    // Parse sig_arr, public_key, and key_meta from JSON manually
+    for (const auto& sig : req_root["sig_arr"]) {
+        RSASigShare sig_share;
+        sig_share.FromJsonString(sig.asString());
+        sig_arr.push_back(sig_share);
+    }
+    public_key.FromJsonString(req_root["public_key"].asString());
+    key_meta.FromJsonString(req_root["key_meta"].asString());
 
     // Call the Safeheron API to combine signatures
     if ( !safeheron::tss_rsa::CombineSignatures(doc, sig_arr, public_key, key_meta, out_sig) ) {
@@ -71,7 +76,9 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 int CombineSignaturesTask::get_reply_string(const std::string &request_id, const safeheron::bignum::BN &out_sig, std::string &out_str) {
     Json::Value reply_json;
     reply_json["success"] = true;
-    reply_json["signature"] = out_sig.ToHexStr();
+    std::string sig_str;
+    out_sig.ToHexStr(sig_str);
+    reply_json["signature"] = sig_str;
     Json::StreamWriterBuilder writer;
     out_str = Json::writeString(writer, reply_json);
     return 0;
