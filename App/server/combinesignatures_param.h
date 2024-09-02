@@ -8,6 +8,12 @@
 #include <crypto-tss-rsa/RSAPublicKey.h>
 #include <crypto-bn/bn.h>
 
+// JSON fields in HTTP request body
+#define FIELD_NAME_DOC                   "doc"
+#define FIELD_NAME_SIG_ARR               "sig_arr"
+#define FIELD_NAME_KEY_META              "key_meta"
+//#define FIELD_NAME_MSG_DIGEST            "msg_digest"
+
 class CombineSignaturesParam {
 public:
     CombineSignaturesParam(const std::string &req_body);

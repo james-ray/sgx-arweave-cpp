@@ -2,6 +2,7 @@
 #include "listen_svr.h"
 #include "Enclave_u.h"
 #include "keyshard_param.h"
+#include "combinesignatures_param.h"
 #include "../common/define.h"
 #include "../common/log_u.h"
 #include "../common/tee_error.h"
@@ -31,6 +32,7 @@ using namespace utility;
 extern sgx_enclave_id_t global_eid;
 extern std::string g_key_shard_generation_path;
 extern std::string g_key_shard_query_path;
+extern std::string g_combine_sigs_path;
 extern int g_max_thread_task_count;
 
 // Thread pool and mutex
@@ -160,6 +162,9 @@ int msg_handler::process(
     }
     else if ( req_path == g_key_shard_query_path ) {
         ret = QueryKeyShardState(req_id, req_body, resp_body);
+    }
+    else if ( req_path == g_combine_sigs_path ) {
+        ret = CombineSignatures(req_id, req_body, resp_body);
     }
     else {
         ERROR( "Request path is unknown! req_path: %s", req_path.c_str() );
@@ -513,55 +518,54 @@ int msg_handler::CombineSignatures(
         std::string & resp_body )
 {
     int ret = 0;
-    CombineSignaturesParam* req_param = nullptr;
+    size_t result_len = 0;
+    char* result = nullptr;
+    sgx_status_t sgx_status;
+    std::string param_string;
+    web::json::value req_json = json::value::parse(req_body);
 
     FUNC_BEGIN;
 
-    // Return if thread pool has no thread resource
-    std::lock_guard<std::mutex> lock(s_thread_lock);
-    if (s_thread_pool.size() >= g_max_thread_task_count) {
-        resp_body = GetMessageReply(false, APP_ERROR_SERVER_IS_BUSY, "TEE service is busy!");
-        return APP_ERROR_SERVER_IS_BUSY;
+    // Validate request body
+    if (!req_json.has_field(FIELD_NAME_DOC) || !req_json.at(FIELD_NAME_DOC).is_string() ||
+        !req_json.has_field(FIELD_NAME_SIG_ARR) || !req_json.at(FIELD_NAME_SIG_ARR).is_array() ||
+        !req_json.has_field(FIELD_NAME_KEY_META) || !req_json.at(FIELD_NAME_KEY_META).is_object()) {
+        ERROR("Request ID: %s, invalid input data!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
+        ret = -1;
+        goto _exit;
     }
-    s_thread_lock.unlock();
 
-    // All parameters must be valid!
-    if (!(req_param = new CombineSignaturesParam(req_body))) {
-        ERROR("Request ID: %s, new CombineSignaturesParam object failed!", req_id.c_str());
-        resp_body = GetMessageReply(false, APP_ERROR_MALLOC_FAILED, "new CombineSignaturesParam object failed!");
-        return APP_ERROR_MALLOC_FAILED;
-    }
-    if (!req_param->check_sig_shares()) {
-        ERROR("Request ID: %s, Signature shares are invalid!", req_id.c_str());
-        resp_body = GetMessageReply(false, APP_ERROR_INVALID_SIG_SHARES, "Signature shares are invalid!");
-        return APP_ERROR_INVALID_SIG_SHARES;
-    }
-    if (!req_param->check_key_meta()) {
-        ERROR("Request ID: %s, Key meta is invalid!", req_id.c_str());
-        resp_body = GetMessageReply(false, APP_ERROR_INVALID_KEY_META, "Key meta is invalid!");
-        return APP_ERROR_INVALID_KEY_META;
-    }
-    if (!req_param->check_msg_digest()) {
-        ERROR("Request ID: %s, Message digest is invalid!", req_id.c_str());
-        resp_body = GetMessageReply(false, APP_ERROR_INVALID_MSG_DIGEST, "Message digest is invalid!");
-        return APP_ERROR_INVALID_MSG_DIGEST;
-    }
-    req_param->request_id_ = req_id;
+    // Convert parameters to JSON string
+    param_string = req_json.serialize();
 
-    // Create a thread for combine signatures task
-    ThreadTask* task = new ThreadTask(CombineSignatures_Task, req_param);
-    if ((ret = task->start()) != 0) {
-        resp_body = GetMessageReply(false, APP_ERROR_FAILED_TO_START_THREAD, "Create task thread failed!");
-        return APP_ERROR_FAILED_TO_START_THREAD;
+    // Call ECALL to combine signatures in TEE
+    if ((sgx_status = ecall_run(global_eid, &ret, eTaskType_CombineSignatures, req_id.c_str(),
+                                param_string.c_str(), param_string.length(), &result, &result_len)) != SGX_SUCCESS) {
+        ERROR("Request ID: %s, ecall_run() raised an error! sgx_status: %d, error message: %s",
+              req_id.c_str(), sgx_status, t_strerror((int)sgx_status));
+        resp_body = GetMessageReply(false, sgx_status, "ECALL raised an error!");
+        ret = sgx_status;
+        goto _exit;
     }
-    s_thread_lock.lock();
-    s_thread_pool.push_back(task);
-    s_thread_lock.unlock();
+    if (0 != ret) {
+        ERROR("Request ID: %s, ecall_run() failed with eTaskType_Combine! ret: 0x%x, error message: %s",
+              req_id.c_str(), ret, result ? result : "");
+        resp_body = GetMessageReply(false, ret, result ? result : "");
+        ret = -1;
+        goto _exit;
+    }
 
-    // return OK
-    resp_body = GetMessageReply(true, 0, "Request has been accepted.");
+    // OK
+    resp_body = result;
+    ret = 0;
 
     FUNC_END;
 
+    _exit:
+    if (result) {
+        free(result);
+        result = nullptr;
+    }
     return ret;
 }

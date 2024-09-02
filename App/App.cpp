@@ -16,6 +16,7 @@ sgx_enclave_id_t global_eid = 0;
 std::unique_ptr<listen_svr> g_httpServer = nullptr;
 std::string g_key_shard_generation_path;
 std::string g_key_shard_query_path;
+std::string g_combine_sigs_path;
 int g_max_thread_task_count = 100;
 
 // Start the HTTP listen server, and receive
