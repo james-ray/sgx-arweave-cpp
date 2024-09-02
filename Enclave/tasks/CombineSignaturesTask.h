@@ -1,13 +1,5 @@
-/**
- * @file CombineSignatures.h
- * @brief : CombineSignatures.h contains the execution of signature combination requests. The process has 3 steps.
- *          Firstly, the document and signature shares are parsed from the request body.
- *          Then, Safeheron's API is called to combine the signature shares into a single signature.
- *          Finally, the result is packed into a JSON structure and returned.
- *
- * @copyright Copyright (c) 2022
- *
- */
+#ifndef COMBINESIGNATURESTASK_H
+#define COMBINESIGNATURESTASK_H
 
 #include "../shell/Dispatcher.h"
 #include <crypto-tss-rsa/tss_rsa.h>
@@ -25,6 +17,9 @@ using safeheron::tss_rsa::RSAKeyMeta;
 class CombineSignaturesTask: public Task
 {
 public:
+    CombineSignaturesTask();
+    virtual ~CombineSignaturesTask();
+
     /**
      * @brief : The execution of signature combination tasks.
      * @param request_id[in] : The unique ID of each request.
@@ -57,3 +52,5 @@ private:
      */
     int get_reply_string( const std::string & request_id, const safeheron::bignum::BN & out_sig, std::string & out_str );
 };
+
+#endif // COMBINESIGNATURESTASK_H

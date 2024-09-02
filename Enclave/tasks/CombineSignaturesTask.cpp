@@ -1,4 +1,3 @@
-// CombineSignatures.cpp
 #include "CombineSignaturesTask.h"
 #include "TaskConstant.h"
 #include "common/tee_util.h"
@@ -24,8 +23,15 @@ using safeheron::ecies::ECIES;
 extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext*> g_keyContext_list;
 
-int CombineSignaturesTask::get_task_type()
-{
+CombineSignaturesTask::CombineSignaturesTask() {
+    // Constructor implementation
+}
+
+CombineSignaturesTask::~CombineSignaturesTask() {
+    // Destructor implementation
+}
+
+int CombineSignaturesTask::get_task_type() {
     return eTaskType_CombineSignatures;
 }
 
@@ -68,10 +74,6 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 
     // Construct reply JSON
     return get_reply_string(request_id, out_sig, reply);
-}
-
-int CombineSignaturesTask::get_task_type() {
-    return TASK_TYPE_COMBINE_SIGNATURES; // Replace with the actual task type constant
 }
 
 int CombineSignaturesTask::get_reply_string(const std::string &request_id, const safeheron::bignum::BN &out_sig, std::string &out_str) {
