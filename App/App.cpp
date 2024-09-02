@@ -73,6 +73,11 @@ int SGX_CDECL main(int argc, char *argv[])
         INFO_OUTPUT_CONSOLE( "Failed to read 'key_shard_query_path' from configuration file ./server.ini!" );
         return -1;
     }
+    g_combine_sigs_path = cfg.get_string( "server", "combine_sigs_path" );
+    if ( g_combine_sigs_path.length() == 0 ) {
+        INFO_OUTPUT_CONSOLE( "Failed to read 'g_combine_sigs_path' from configuration file ./server.ini!" );
+        return -1;
+    }
     g_max_thread_task_count = cfg.get_int( "server", "max_thread_task_count" );
     if ( g_max_thread_task_count <= 0 ) {
         INFO_OUTPUT_CONSOLE( "Failed to read 'max_thread_task_count' from configuration file ./server.ini!" );
