@@ -29,7 +29,7 @@ int CombineSignaturesTask::get_task_type() {
 
 int CombineSignaturesTask::execute(const std::string &request_id, const std::string &request, std::string &reply, std::string &error_msg) {
     int ret = 0;
-    JSON::Root req_root;
+    Json::Value req_root;
     std::string doc;
     std::vector<RSASigShare> sig_arr;
     RSAPublicKey public_key;
@@ -45,8 +45,10 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     }
 
     // Parse request parameters from request body data
-    req_root = JSON::Root::parse( request );
-    if ( !req_root.is_valid() ) {
+    Json::CharReaderBuilder reader;
+    std::string errs;
+    std::istringstream s(request);
+    if (!Json::parseFromStream(reader, s, &req_root, &errs)) {
         error_msg = format_msg( "Request ID: %s, request body is not in JSON! request: %s",
                                 request_id.c_str(), request.c_str() );
         ERROR( "%s", error_msg.c_str() );
