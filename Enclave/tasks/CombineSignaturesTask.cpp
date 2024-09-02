@@ -29,12 +29,7 @@ int CombineSignaturesTask::get_task_type()
     return eTaskType_CombineSignatures;
 }
 
-int CombineSignaturesTask::execute(
-        const std::string & request_id,
-        const std::string & request,
-        std::string & reply,
-        std::string & error_msg )
-{
+int CombineSignaturesTask::execute(const std::string &request_id, const std::string &request, std::string &reply, std::string &error_msg) {
     int ret = 0;
     JSON::Root req_root;
     std::string doc;
@@ -71,13 +66,19 @@ int CombineSignaturesTask::execute(
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
     }
 
-    // Construct reply JSON string
-    JSON::Root root;
-    root["success"] = true;
-    root["signature"] = out_sig.ToHexStr();
-    reply = JSON::Root::write( root );
+    // Construct reply JSON
+    return get_reply_string(request_id, out_sig, reply);
+}
 
-    FUNC_END;
+int CombineSignaturesTask::get_task_type() {
+    return TASK_TYPE_COMBINE_SIGNATURES; // Replace with the actual task type constant
+}
 
-    return ret;
+int CombineSignaturesTask::get_reply_string(const std::string &request_id, const safeheron::bignum::BN &out_sig, std::string &out_str) {
+    Json::Value reply_json;
+    reply_json["success"] = true;
+    reply_json["signature"] = out_sig.ToHexStr();
+    Json::StreamWriterBuilder writer;
+    out_str = Json::writeString(writer, reply_json);
+    return 0;
 }
