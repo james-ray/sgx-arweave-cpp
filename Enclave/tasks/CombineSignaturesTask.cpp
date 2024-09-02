@@ -23,14 +23,6 @@ using safeheron::ecies::ECIES;
 extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext*> g_keyContext_list;
 
-CombineSignaturesTask::CombineSignaturesTask() {
-    // Constructor implementation
-}
-
-CombineSignaturesTask::~CombineSignaturesTask() {
-    // Destructor implementation
-}
-
 int CombineSignaturesTask::get_task_type() {
     return eTaskType_CombineSignatures;
 }
