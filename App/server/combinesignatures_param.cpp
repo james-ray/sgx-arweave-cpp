@@ -14,7 +14,7 @@ CombineSignaturesParam::CombineSignaturesParam(const std::string &req_body) {
     // Parse key_meta_
     // Initialize key_meta_ from JSON
     // Parse msg_digest_
-    msg_digest_ = root["msg_digest"].asString();
+    msg_digest_ = root["doc"].asString();
 }
 
 bool CombineSignaturesParam::check_sig_shares() const {

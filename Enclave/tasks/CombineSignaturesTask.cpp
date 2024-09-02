@@ -58,7 +58,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     key_meta = req_root["key_meta"].asRSAKeyMeta();
 
     // Call the Safeheron API to combine signatures
-    if ( !safeheron::tss_rsa::CombineSignature(doc, sig_arr, public_key, key_meta, out_sig) ) {
+    if ( !safeheron::tss_rsa::CombineSignatures(doc, sig_arr, public_key, key_meta, out_sig) ) {
         error_msg = format_msg( "Request ID: %s, CombineSignature failed!", request_id.c_str() );
         ERROR( "%s", error_msg.c_str() );
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
