@@ -12,6 +12,7 @@
 #include <cstring>
 #include <mutex>
 #include <map>
+#include <sstream> // Include for std::istringstream
 
 #include "Enclave_t.h"
 
@@ -29,7 +30,7 @@ int CombineSignaturesTask::get_task_type() {
 
 int CombineSignaturesTask::execute(const std::string &request_id, const std::string &request, std::string &reply, std::string &error_msg) {
     int ret = 0;
-    Json::Value req_root;
+    JSON::Root req_root;
     std::string doc;
     std::vector<RSASigShare> sig_arr;
     RSAPublicKey public_key;
@@ -45,10 +46,8 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     }
 
     // Parse request parameters from request body data
-    Json::CharReaderBuilder reader;
-    std::string errs;
-    std::istringstream s(request);
-    if (!Json::parseFromStream(reader, s, &req_root, &errs)) {
+    req_root = JSON::Root::parse(request);
+    if (!req_root.is_valid()) {
         error_msg = format_msg( "Request ID: %s, request body is not in JSON! request: %s",
                                 request_id.c_str(), request.c_str() );
         ERROR( "%s", error_msg.c_str() );
@@ -56,16 +55,16 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     }
     doc = req_root["doc"].asString();
     // Parse sig_arr, public_key, and key_meta from JSON manually
-    for (const auto& sig : req_root["sig_arr"]) {
+    for (const auto& sig : req_root["sig_arr"].asStringArrary()) {
         RSASigShare sig_share;
-        sig_share.FromJsonString(sig.asString());
+        sig_share.FromJsonString(sig);
         sig_arr.push_back(sig_share);
     }
     public_key.FromJsonString(req_root["public_key"].asString());
     key_meta.FromJsonString(req_root["key_meta"].asString());
 
     // Call the Safeheron API to combine signatures
-    if ( !safeheron::tss_rsa::CombineSignatures(doc, sig_arr, public_key, key_meta, out_sig) ) {
+    if (!safeheron::tss_rsa::CombineSignatures(doc, sig_arr, public_key, key_meta, out_sig)) {
         error_msg = format_msg( "Request ID: %s, CombineSignature failed!", request_id.c_str() );
         ERROR( "%s", error_msg.c_str() );
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
@@ -76,12 +75,11 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 }
 
 int CombineSignaturesTask::get_reply_string(const std::string &request_id, const safeheron::bignum::BN &out_sig, std::string &out_str) {
-    Json::Value reply_json;
+    JSON::Root reply_json;
     reply_json["success"] = true;
     std::string sig_str;
     out_sig.ToHexStr(sig_str);
     reply_json["signature"] = sig_str;
-    Json::StreamWriterBuilder writer;
-    out_str = Json::writeString(writer, reply_json);
+    out_str = JSON::Root::write(reply_json);
     return 0;
 }

@@ -18,8 +18,8 @@
 #include <crypto-tss-rsa/RSAKeyMeta.h>
 #include <crypto-tss-rsa/KeyGenParam.h>
 #include <crypto-encode/hex.h>
- #include <string>
- #include <vector>
+#include <string>
+#include <vector>
 
 using safeheron::tss_rsa::RSAPrivateKeyShare;
 using safeheron::tss_rsa::RSAPublicKey;
