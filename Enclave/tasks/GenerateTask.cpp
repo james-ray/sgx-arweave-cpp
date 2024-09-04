@@ -218,7 +218,7 @@ std::vector<char> GenerateTask::generate_random_hex(size_t length) {
     std::stringstream ss;
 
     for (size_t i = 0; i < length; ++i) {
-        BN random_bn = safeheron::rand::RandomBNLt(BN::FromHexStr("ff"));
+        safeheron::bignum::BN random_bn = safeheron::rand::RandomBNLt(BN::FromHexStr("ff"));
         ss << std::hex << std::setw(2) << std::setfill('0') << random_bn.ToInt();
     }
 
