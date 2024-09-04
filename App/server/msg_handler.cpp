@@ -529,7 +529,7 @@ int msg_handler::CombineSignatures(
     // Validate request body
     if (!req_json.has_field(FIELD_NAME_DOC) || !req_json.at(FIELD_NAME_DOC).is_string() ||
         !req_json.has_field(FIELD_NAME_SIG_ARR) || !req_json.at(FIELD_NAME_SIG_ARR).is_array() ||
-            !req_json.has_field(FIELD_NAME_PUBLIC_KEY) || !req_json.at(FIELD_NAME_PUBLIC_KEY).is_string() ||
+            !req_json.has_field(FIELD_NAME_PUBLIC_KEY) || !req_json.at(FIELD_NAME_PUBLIC_KEY).is_object() ||
         !req_json.has_field(FIELD_NAME_KEY_META) || !req_json.at(FIELD_NAME_KEY_META).is_object()) {
         ERROR("Request ID: %s, invalid input data!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");

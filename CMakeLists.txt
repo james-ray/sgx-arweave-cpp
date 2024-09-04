@@ -4,6 +4,7 @@ project(tee-arweave-server "C" "CXX")
 set(PROJECT_VERSION 0.0.1)
 
 set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 
