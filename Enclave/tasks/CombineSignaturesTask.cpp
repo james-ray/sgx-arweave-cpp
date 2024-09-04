@@ -47,7 +47,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 
     // Parse request parameters from request body data
     req_root = JSON::Root::parse(request);
-    INFO_OUTPUT_CONSOLE("--->req_root: %s\n", req_root);
+    INFO_OUTPUT_CONSOLE("--->req_root: %s\n", req_root.toStyledString().c_str());
     if (!req_root.is_valid()) {
         error_msg = format_msg( "Request ID: %s, request body is not in JSON! request: %s",
                                 request_id.c_str(), request.c_str() );
@@ -55,7 +55,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
         return TEE_ERROR_INVALID_PARAMETER;
     }
     doc = req_root["doc"].asString();
-    INFO_OUTPUT_CONSOLE("--->DOC: %s\n", doc);
+    INFO_OUTPUT_CONSOLE("--->DOC: %s\n", doc.c_str());
     // Parse sig_arr, public_key, and key_meta from JSON manually
     for (const auto& sig : req_root["sig_shares"].asStringArrary()) {
         RSASigShare sig_share;
