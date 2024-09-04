@@ -76,7 +76,9 @@ namespace JSON
         virtual bool is_valid();
         virtual void clear();
         virtual Value operator[]( const char* key );
-        //
+        std::string serialize() const {
+            return JSON::Root::write(*this);
+        }
     public: /* internal values, don't use them directly! */
         void*   m_read_root;
         void*   m_write_root;
