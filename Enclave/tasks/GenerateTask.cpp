@@ -212,7 +212,7 @@ int GenerateTask::get_keymeta_hash(
 // Function to generate random hex bytes
 std::vector<char> GenerateTask::generate_random_hex(size_t length) {
     std::vector<unsigned char> random_bytes(length);
-    std::generate_n(random_bytes.begin(), length, []() { return static_cast<unsigned char>(rand() % 256); });
+    std::generate_n(random_bytes.begin(), length, []() { return static_cast<unsigned char>(safeheron::rand() % 256); });
 
     std::vector<char> hex_string;
     std::stringstream ss;
