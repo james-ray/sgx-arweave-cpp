@@ -7,6 +7,8 @@
 #include <crypto-curve/curve.h>
 #include <crypto-ecies/ecies.h>
 #include <crypto-encode/base64.h>
+#include <crypto-bn/bn.h>
+#include <crypto-bn/rand.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <random>
@@ -209,16 +211,17 @@ int GenerateTask::get_keymeta_hash(
     return TEE_OK;
 }
 
+
 // Function to generate random hex bytes
 std::vector<char> GenerateTask::generate_random_hex(size_t length) {
-    std::vector<unsigned char> random_bytes(length);
-    std::generate_n(random_bytes.begin(), length, []() { return static_cast<unsigned char>(safeheron::rand() % 256); });
-
     std::vector<char> hex_string;
     std::stringstream ss;
-    for (const auto& byte : random_bytes) {
-        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
+
+    for (size_t i = 0; i < length; ++i) {
+        BN random_bn = safeheron::rand::RandomBNLt(BN::FromHexStr("ff"));
+        ss << std::hex << std::setw(2) << std::setfill('0') << random_bn.ToInt();
     }
+
     std::string temp = ss.str();
     hex_string.assign(temp.begin(), temp.end());
     return hex_string;
