@@ -56,7 +56,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     INFO_OUTPUT_CONSOLE("--->DOC: %s\n", doc.c_str());
 
     // Parse sig_arr, public_key, and key_meta from JSON manually
-    for (const auto &sig: req_root["sig_shares"].asStringArray()) {
+    for (const auto &sig: req_root["sig_shares"].asStringArrary()) {
         RSASigShare sig_share;
         INFO_OUTPUT_CONSOLE("--->Parsing sig_share: %s\n", sig.c_str());
         if (!sig_share.FromJsonString(sig)) {
