@@ -19,6 +19,7 @@
 #include <crypto-tss-rsa/KeyGenParam.h>
 #include <crypto-encode/hex.h>
 #include <string>
+#include <cstring>
 #include <vector>
 
 using safeheron::tss_rsa::RSAPrivateKeyShare;
@@ -132,4 +133,6 @@ private:
      * @return int : Return TEE_OK if success, otherwise return an error code.
      */
     int get_private_key_info_cipher( const std::string & request_id, int index, const std::string & input_pubkey, const RSAPrivateKeyShare & private_key, const RSAKeyMeta & key_meta, std::string & out_str );
+    // Declare the generate_random_hex function
+    std::string generate_random_hex(size_t length);
 };
