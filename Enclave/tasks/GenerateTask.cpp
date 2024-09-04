@@ -10,6 +10,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <random>
+#include <cstring>
 #include <sstream>
 #include <iomanip>
 #include <mutex>
@@ -209,16 +210,18 @@ int GenerateTask::get_keymeta_hash(
 }
 
 // Function to generate random hex bytes
-std::string GenerateTask::generate_random_hex(size_t length) {
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dis(0, 15);
+std::vector<char> GenerateTask::generate_random_hex(size_t length) {
+    std::vector<unsigned char> random_bytes(length);
+    std::generate_n(random_bytes.begin(), length, []() { return static_cast<unsigned char>(rand() % 256); });
 
+    std::vector<char> hex_string;
     std::stringstream ss;
-    for (size_t i = 0; i < length; ++i) {
-        ss << std::hex << dis(gen);
+    for (const auto& byte : random_bytes) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << static_cast<int>(byte);
     }
-    return ss.str();
+    std::string temp = ss.str();
+    hex_string.assign(temp.begin(), temp.end());
+    return hex_string;
 }
 
 int GenerateTask::get_reply_string(
@@ -266,6 +269,12 @@ int GenerateTask::get_reply_string(
         ++index;
     }
     root["key_shard_pkg"] = pkg_array;
+    // Generate random hex bytes for workspace_id
+    std::vector<char> workspace_id_vec = generate_random_hex(32); // 32 hex characters
+    std::string workspace_id(workspace_id_vec.begin(), workspace_id_vec.end());
+
+    // Add the workspace_id to the root JSON object
+    root["workspace_id"] = workspace_id;
 
     // return JSON string
     out_str = JSON::Root::write( root );
@@ -296,13 +305,6 @@ int GenerateTask::get_private_key_info_cipher(
     CurvePoint ec_pubkey;
 
     FUNC_BEGIN;
-
-    // Generate random hex bytes for workspace_id
-    std::string workspace_id = generate_random_hex(32); // 32 hex characters
-
-    // Add the workspace_id to the root JSON object
-    root["workspace_id"] = workspace_id;
-
     // Parse the key meta string into a JSON object key_meta_node
     // and add JSON object key_meta_node named "key_meta" to JSON object root
     key_meta.ToJsonString( key_meta_str );
