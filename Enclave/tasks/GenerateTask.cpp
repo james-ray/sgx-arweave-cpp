@@ -216,7 +216,7 @@ std::string GenerateTask::generate_random_hex(size_t length) {
 
     std::stringstream ss;
     for (size_t i = 0; i < length; ++i) {
-        ss << std::hex << std::setw(1) << std::setfill('0') << dis(gen);
+        ss << std::hex << dis(gen);
     }
     return ss.str();
 }
