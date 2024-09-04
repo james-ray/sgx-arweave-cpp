@@ -9,7 +9,9 @@
 #include <crypto-encode/base64.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <uuid/uuid.h>
+#include <random>
+#include <sstream>
+#include <iomanip>
 #include <cstring>
 #include <mutex>
 #include <map>
@@ -207,6 +209,19 @@ int GenerateTask::get_keymeta_hash(
     return TEE_OK;
 }
 
+// Function to generate random hex bytes
+std::string GenerateTask::generate_random_hex(size_t length) {
+    std::random_device rd;
+    std::mt19937 gen(rd());
+    std::uniform_int_distribution<> dis(0, 15);
+
+    std::stringstream ss;
+    for (size_t i = 0; i < length; ++i) {
+        ss << std::hex << std::setw(1) << std::setfill('0') << dis(gen);
+    }
+    return ss.str();
+}
+
 int GenerateTask::get_reply_string(
     const std::string & request_id,
     const std::string & input_pubkey_hash, 
@@ -283,14 +298,12 @@ int GenerateTask::get_private_key_info_cipher(
 
     FUNC_BEGIN;
 
-    // Generate a random UUID string
-    uuid_t uuid;
-    char uuid_str[37];
-    uuid_generate_random(uuid);
-    uuid_unparse(uuid, uuid_str);
+    // Generate random hex bytes for workspace_id
+    std::string workspace_id = generate_random_hex(32); // 32 hex characters
 
     // Add the workspace_id to the root JSON object
-    root["workspace_id"] = uuid_str;
+    root["workspace_id"] = workspace_id;
+
     // Parse the key meta string into a JSON object key_meta_node
     // and add JSON object key_meta_node named "key_meta" to JSON object root
     key_meta.ToJsonString( key_meta_str );
