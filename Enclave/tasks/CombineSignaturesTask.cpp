@@ -33,22 +33,19 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     int ret = 0;
     JSON::Root req_root;
     std::string doc;
-    std::vector <RSASigShare> sig_arr;
+    std::vector<RSASigShare> sig_arr;
     RSAPublicKey public_key;
     RSAKeyMeta key_meta;
     safeheron::bignum::BN out_sig;
 
     FUNC_BEGIN;
-    //INFO_OUTPUT_CONSOLE("--->FUNC_BEGIN: \n");
     if (request.length() == 0) {
         error_msg = format_msg("Request ID: %s, request is null!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_INVALID_PARAMETER;
     }
 
-    // Parse request parameters from request body data
     req_root = JSON::Root::parse(request);
-    //INFO_OUTPUT_CONSOLE("--->req_root: %s\n", req_root.serialize());
     if (!req_root.is_valid()) {
         error_msg = format_msg("Request ID: %s, request body is not in JSON! request: %s",
                                request_id.c_str(), request.c_str());
@@ -57,24 +54,30 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     }
     doc = req_root["doc"].asString();
     INFO_OUTPUT_CONSOLE("--->DOC: %s\n", doc.c_str());
+
     // Parse sig_arr, public_key, and key_meta from JSON manually
-    for (const auto &sig: req_root["sig_shares"].asStringArrary()) {
+    for (const auto &sig: req_root["sig_shares"].asStringArray()) {
         RSASigShare sig_share;
-        sig_share.FromJsonString(sig);
+        INFO_OUTPUT_CONSOLE("--->Parsing sig_share: %s\n", sig.c_str());
+        if (!sig_share.FromJsonString(sig)) {
+            error_msg = format_msg("Request ID: %s, failed to parse sig_share: %s", request_id.c_str(), sig.c_str());
+            ERROR("%s", error_msg.c_str());
+            return TEE_ERROR_INVALID_PARAMETER;
+        }
         sig_arr.push_back(sig_share);
     }
     INFO_OUTPUT_CONSOLE("--->sig_arr finish: %d\n", sig_arr.size());
+
     public_key.FromJsonString(req_root["public_key"].asString());
     key_meta.FromJsonString(req_root["key_meta"].asString());
     INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: %d\n", sig_arr.size());
-    // Call the Safeheron API to combine signatures
+
     if (!safeheron::tss_rsa::CombineSignatures(doc, sig_arr, public_key, key_meta, out_sig)) {
         error_msg = format_msg("Request ID: %s, CombineSignature failed!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
     }
 
-    // Construct reply JSON
     return get_reply_string(request_id, out_sig, reply);
 }
 
