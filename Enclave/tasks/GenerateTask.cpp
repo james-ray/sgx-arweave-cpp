@@ -211,15 +211,14 @@ int GenerateTask::get_keymeta_hash(
     return TEE_OK;
 }
 
-
 // Function to generate random hex bytes
 std::vector<char> GenerateTask::generate_random_hex(size_t length) {
     std::vector<char> hex_string;
     std::stringstream ss;
 
     for (size_t i = 0; i < length; ++i) {
-        safeheron::bignum::BN random_bn = safeheron::rand::RandomBNLt(BN::FromHexStr("ff"));
-        ss << std::hex << std::setw(2) << std::setfill('0') << random_bn.ToInt();
+        safeheron::bignum::BN random_bn = safeheron::rand::RandomBNLt(safeheron::bignum::BN::FromHexStr("ff"));
+        ss << std::hex << std::setw(2) << std::setfill('0') << random_bn.ToHexStr();
     }
 
     std::string temp = ss.str();
