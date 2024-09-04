@@ -9,6 +9,7 @@
 #include <crypto-encode/base64.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <uuid/uuid.h>
 #include <cstring>
 #include <mutex>
 #include <map>
@@ -282,6 +283,14 @@ int GenerateTask::get_private_key_info_cipher(
 
     FUNC_BEGIN;
 
+    // Generate a random UUID string
+    uuid_t uuid;
+    char uuid_str[37];
+    uuid_generate_random(uuid);
+    uuid_unparse(uuid, uuid_str);
+
+    // Add the workspace_id to the root JSON object
+    root["workspace_id"] = uuid_str;
     // Parse the key meta string into a JSON object key_meta_node
     // and add JSON object key_meta_node named "key_meta" to JSON object root
     key_meta.ToJsonString( key_meta_str );
