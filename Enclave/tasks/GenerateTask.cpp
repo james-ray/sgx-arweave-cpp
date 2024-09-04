@@ -216,9 +216,14 @@ std::vector<char> GenerateTask::generate_random_hex(size_t length) {
     std::vector<char> hex_string;
     std::stringstream ss;
 
+    // Use a large number to generate random bytes
+    safeheron::bignum::BN max_value = safeheron::bignum::BN::FromHexStr("ff");
+
     for (size_t i = 0; i < length; ++i) {
-        safeheron::bignum::BN random_bn = safeheron::rand::RandomBNLt(safeheron::bignum::BN::FromHexStr("ff"));
-        ss << std::hex << std::setw(2) << std::setfill('0') << random_bn.ToHexStr();
+        safeheron::bignum::BN random_bn = safeheron::rand::RandomBNLt(max_value);
+        std::string hex_str;
+        random_bn.ToHexStr(hex_str);
+        ss << hex_str;
     }
 
     std::string temp = ss.str();
