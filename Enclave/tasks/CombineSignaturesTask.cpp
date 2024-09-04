@@ -47,7 +47,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 
     // Parse request parameters from request body data
     req_root = JSON::Root::parse(request);
-    INFO_OUTPUT_CONSOLE("--->req_root: %s\n", req_root.serialize();
+    INFO_OUTPUT_CONSOLE("--->req_root: %s\n", req_root.serialize());
     if (!req_root.is_valid()) {
         error_msg = format_msg( "Request ID: %s, request body is not in JSON! request: %s",
                                 request_id.c_str(), request.c_str() );
