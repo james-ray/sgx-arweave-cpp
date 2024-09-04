@@ -38,7 +38,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     safeheron::bignum::BN out_sig;
 
     FUNC_BEGIN;
-
+    INFO_OUTPUT_CONSOLE("--->FUNC_BEGIN: \n");
     if (request.length() == 0) {
         error_msg = format_msg( "Request ID: %s, request is null!", request_id.c_str() );
         ERROR( "%s", error_msg.c_str() );
@@ -47,6 +47,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 
     // Parse request parameters from request body data
     req_root = JSON::Root::parse(request);
+    INFO_OUTPUT_CONSOLE("--->req_root: %s\n", req_root);
     if (!req_root.is_valid()) {
         error_msg = format_msg( "Request ID: %s, request body is not in JSON! request: %s",
                                 request_id.c_str(), request.c_str() );
@@ -54,6 +55,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
         return TEE_ERROR_INVALID_PARAMETER;
     }
     doc = req_root["doc"].asString();
+    INFO_OUTPUT_CONSOLE("--->DOC: %s\n", doc);
     // Parse sig_arr, public_key, and key_meta from JSON manually
     for (const auto& sig : req_root["sig_shares"].asStringArrary()) {
         RSASigShare sig_share;
