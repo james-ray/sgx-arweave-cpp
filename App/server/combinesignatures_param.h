@@ -10,7 +10,7 @@
 
 // JSON fields in HTTP request body
 #define FIELD_NAME_DOC                   "doc"
-#define FIELD_NAME_SIG_ARR               "sig_arr"
+#define FIELD_NAME_SIG_ARR               "sig_shares"
 #define FIELD_NAME_KEY_META              "key_meta"
 #define FIELD_NAME_PUBLIC_KEY            "public_key"
 
