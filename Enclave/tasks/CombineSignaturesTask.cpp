@@ -56,15 +56,15 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     INFO_OUTPUT_CONSOLE("--->DOC: %s\n", doc.c_str());
 
     // Parse sig_arr
-    JSON::Root sig_shares_json = req_root["sig_shares"].asJson();
-    for (int i = 0; i < 3; ++i) {
-        JSON::Value item = sig_shares_json[i];
-        if (item.is_valid()) {
+    JSON::STR_ARRAY sig_shares_str_arr = req_root["sig_shares"].asStringArrary();
+    for (const std::string &sig_share_str : sig_shares_str_arr) {
+        JSON::Root sig_share_json = JSON::Root::parse(sig_share_str);
+        if (sig_share_json.is_valid()) {
             RSASigShare sig_share;
-            sig_share.set_index(item["index"].asInt());
-            sig_share.set_sig_share(safeheron::bignum::BN(item["sig_share"].asString().c_str(), 16));
-            sig_share.set_z(safeheron::bignum::BN(item["z"].asString().c_str(), 16));
-            sig_share.set_c(safeheron::bignum::BN(item["c"].asString().c_str(), 16));
+            sig_share.set_index(sig_share_json["index"].asInt());
+            sig_share.set_sig_share(safeheron::bignum::BN(sig_share_json["sig_share"].asString().c_str(), 16));
+            sig_share.set_z(safeheron::bignum::BN(sig_share_json["z"].asString().c_str(), 16));
+            sig_share.set_c(safeheron::bignum::BN(sig_share_json["c"].asString().c_str(), 16));
             sig_arr.push_back(sig_share);
         }
     }
@@ -81,11 +81,9 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     key_meta.set_k(key_meta_json["k"].asInt());
     key_meta.set_l(key_meta_json["l"].asInt());
     std::vector<safeheron::bignum::BN> vki_arr;
-    for (int i = 0; i < 3; ++i) {
-        JSON::Value item = key_meta_json["vkiArr"][i];
-        if (item.is_valid()) {
-            vki_arr.push_back(safeheron::bignum::BN(item.asString().c_str(), 16));
-        }
+    JSON::STR_ARRAY vki_str_arr = key_meta_json["vkiArr"].asStringArrary();
+    for (const std::string &vki_str : vki_str_arr) {
+        vki_arr.push_back(safeheron::bignum::BN(vki_str.c_str(), 16));
     }
     key_meta.set_vki_arr(vki_arr);
     key_meta.set_vku(safeheron::bignum::BN(key_meta_json["vku"].asString().c_str(), 16));
