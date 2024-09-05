@@ -74,7 +74,9 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     JSON::Root public_key_json = req_root["public_key"].asJson();
     public_key.set_e(safeheron::bignum::BN(public_key_json["e"].asString().c_str(), 16));
     public_key.set_n(safeheron::bignum::BN(public_key_json["n"].asString().c_str(), 16));
-    INFO_OUTPUT_CONSOLE("--->after parse public_key: n %s\n", public_key.n().ToHexStr().c_str());
+    std::string public_key_n_str;
+    public_key.n().ToHexStr(public_key_n_str);
+    INFO_OUTPUT_CONSOLE("--->after parse public_key: n %s\n", public_key_n_str.c_str());
 
     // Parse key_meta
     JSON::Root key_meta_json = req_root["key_meta"].asJson();
