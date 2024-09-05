@@ -1,8 +1,11 @@
 #include "json.h"
 #include "cJSON.h"
-#include <cstdio>
-#include <stdlib.h>
+#include "common/tee_util.h"
+#include "common/tee_error.h"
 #include "common/log_t.h"
+#include "json/json.h"
+#include <stdlib.h>
+#include <unistd.h>
 
 namespace JSON
 {
