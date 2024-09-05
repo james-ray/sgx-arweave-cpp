@@ -55,29 +55,19 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     doc = req_root["doc"].asString();
     INFO_OUTPUT_CONSOLE("--->DOC: %s\n", doc.c_str());
 
-    // Parse sig_arr, public_key, and key_meta from JSON manually
+    // Parse sig_arr
     JSON::Root sig_shares_json = req_root["sig_shares"].asJson();
-    for (int i = 0; i < sig_shares_json.asJson().size(); ++i) {
+    for (int i = 0; i < sig_shares_json.size(); ++i) {
         JSON::Value item = sig_shares_json[i];
         if (item.is_valid()) {
             JSON::Value sig_share_item = item["sig_share"];
             if (sig_share_item.is_valid()) {
                 RSASigShare sig_share;
-                std::string sig_share_str = sig_share_item.asString();
-
-                // Parse the sig_share string into a JSON object
-                JSON::Root sig_share_json = JSON::Root::parse(sig_share_str);
-                if (sig_share_json.is_valid()) {
-                    sig_share.index = sig_share_json["index"].asInt();
-                    sig_share.sig_share = safeheron::bignum::BN(sig_share_json["sig_share"].asString().c_str(), 16);
-                    sig_share.z = safeheron::bignum::BN(sig_share_json["z"].asString().c_str(), 16);
-                    sig_share.c = safeheron::bignum::BN(sig_share_json["c"].asString().c_str(), 16);
-                    sig_arr.push_back(sig_share);
-                } else {
-                    error_msg = format_msg("Request ID: %s, failed to parse sig_share JSON: %s", request_id.c_str(), sig_share_str.c_str());
-                    ERROR("%s", error_msg.c_str());
-                    return TEE_ERROR_INVALID_PARAMETER;
-                }
+                sig_share.set_index(sig_share_item["index"].asInt());
+                sig_share.set_sig_share(safeheron::bignum::BN(sig_share_item["sig_share"].asString().c_str(), 16));
+                sig_share.set_z(safeheron::bignum::BN(sig_share_item["z"].asString().c_str(), 16));
+                sig_share.set_c(safeheron::bignum::BN(sig_share_item["c"].asString().c_str(), 16));
+                sig_arr.push_back(sig_share);
             }
         }
     }
@@ -85,24 +75,26 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 
     // Parse public_key
     JSON::Root public_key_json = req_root["public_key"].asJson();
-    public_key.e = safeheron::bignum::BN(public_key_json["e"].asString().c_str(), 16);
-    public_key.n = safeheron::bignum::BN(public_key_json["n"].asString().c_str(), 16);
-    INFO_OUTPUT_CONSOLE("--->after parse public_key: n %s\n", public_key.n.ToHexStr().c_str());
+    public_key.set_e(safeheron::bignum::BN(public_key_json["e"].asString().c_str(), 16));
+    public_key.set_n(safeheron::bignum::BN(public_key_json["n"].asString().c_str(), 16));
+    INFO_OUTPUT_CONSOLE("--->after parse public_key: n %s\n", public_key.n().ToHexStr().c_str());
 
     // Parse key_meta
     JSON::Root key_meta_json = req_root["key_meta"].asJson();
-    key_meta.k = key_meta_json["k"].asInt();
-    key_meta.l = key_meta_json["l"].asInt();
-    for (int i = 0; i < key_meta_json["vkiArr"].asJson().size(); ++i) {
+    key_meta.set_k(key_meta_json["k"].asInt());
+    key_meta.set_l(key_meta_json["l"].asInt());
+    std::vector<safeheron::bignum::BN> vki_arr;
+    for (int i = 0; i < key_meta_json["vkiArr"].size(); ++i) {
         JSON::Value item = key_meta_json["vkiArr"][i];
         if (item.is_valid()) {
-            key_meta.vki_arr.push_back(item.asString());
+            vki_arr.push_back(safeheron::bignum::BN(item.asString().c_str(), 16));
         }
     }
-    key_meta.vku = key_meta_json["vku"].asString();
-    key_meta.vkv = key_meta_json["vkv"].asString();
+    key_meta.set_vki_arr(vki_arr);
+    key_meta.set_vku(safeheron::bignum::BN(key_meta_json["vku"].asString().c_str(), 16));
+    key_meta.set_vkv(safeheron::bignum::BN(key_meta_json["vkv"].asString().c_str(), 16));
 
-    INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vki_arr %ld\n", key_meta.vki_arr.size());
+    INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vki_arr %ld\n", key_meta.vki_arr().size());
 
     if (!safeheron::tss_rsa::CombineSignatures(doc, sig_arr, public_key, key_meta, out_sig)) {
         error_msg = format_msg("Request ID: %s, CombineSignature failed!", request_id.c_str());
