@@ -1,3 +1,4 @@
+#include <stdlib.h>
 #include "json.h"
 #include "cJSON.h"
 #include "common/log_t.h"
