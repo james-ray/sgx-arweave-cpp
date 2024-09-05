@@ -12,7 +12,7 @@
 #include <cstring>
 #include <mutex>
 #include <map>
-#include <sstream> // Include for std::istringstream
+#include <sstream>
 
 #include "Enclave_t.h"
 
@@ -57,13 +57,13 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 
     // Parse sig_arr, public_key, and key_meta from JSON manually
     JSON::Root sig_shares_json = req_root["sig_shares"].asJson();
-    for (int i = 0; i < cJSON_GetArraySize((cJSON*)sig_shares_json.m_read_root); ++i) {
-        cJSON* item = cJSON_GetArrayItem((cJSON*)sig_shares_json.m_read_root, i);
-        if (item && item->type == cJSON_Object) {
-            cJSON* sig_share_item = cJSON_GetObjectItem(item, "sig_share");
-            if (sig_share_item && sig_share_item->type == cJSON_String) {
+    for (int i = 0; i < sig_shares_json.asJson().size(); ++i) {
+        JSON::Value item = sig_shares_json[i];
+        if (item.is_valid()) {
+            JSON::Value sig_share_item = item["sig_share"];
+            if (sig_share_item.is_valid()) {
                 RSASigShare sig_share;
-                std::string sig_share_str = sig_share_item->valuestring;
+                std::string sig_share_str = sig_share_item.asString();
 
                 // Parse the sig_share string into a JSON object
                 JSON::Root sig_share_json = JSON::Root::parse(sig_share_str);
@@ -81,7 +81,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
             }
         }
     }
-    INFO_OUTPUT_CONSOLE("--->after parse sig_shares: %d\n", sig_arr.size());
+    INFO_OUTPUT_CONSOLE("--->after parse sig_shares: %ld\n", sig_arr.size());
 
     // Parse public_key
     JSON::Root public_key_json = req_root["public_key"].asJson();
@@ -93,16 +93,16 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     JSON::Root key_meta_json = req_root["key_meta"].asJson();
     key_meta.k = key_meta_json["k"].asInt();
     key_meta.l = key_meta_json["l"].asInt();
-    for (int i = 0; i < cJSON_GetArraySize((cJSON*)key_meta_json["vkiArr"].m_read_root); ++i) {
-        cJSON* item = cJSON_GetArrayItem((cJSON*)key_meta_json["vkiArr"].m_read_root, i);
-        if (item && item->type == cJSON_String) {
-            key_meta.vkiArr.push_back(item->valuestring);
+    for (int i = 0; i < key_meta_json["vkiArr"].asJson().size(); ++i) {
+        JSON::Value item = key_meta_json["vkiArr"][i];
+        if (item.is_valid()) {
+            key_meta.vki_arr.push_back(item.asString());
         }
     }
     key_meta.vku = key_meta_json["vku"].asString();
     key_meta.vkv = key_meta_json["vkv"].asString();
 
-    INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vkiArr %d\n", key_meta.vkiArr.size());
+    INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vki_arr %ld\n", key_meta.vki_arr.size());
 
     if (!safeheron::tss_rsa::CombineSignatures(doc, sig_arr, public_key, key_meta, out_sig)) {
         error_msg = format_msg("Request ID: %s, CombineSignature failed!", request_id.c_str());
