@@ -7,13 +7,13 @@
 namespace JSON
 {
     Root::Root()
-    : m_read_root( nullptr )
-    , m_write_root( nullptr )
+            : m_read_root( nullptr )
+            , m_write_root( nullptr )
     {
     }
     Root::Root( const Root & other )
-    : m_read_root( cJSON_Duplicate( (cJSON*)other.m_read_root, true) )
-    , m_write_root( cJSON_Duplicate( (cJSON*)other.m_write_root, true) )
+            : m_read_root( cJSON_Duplicate( (cJSON*)other.m_read_root, true) )
+            , m_write_root( cJSON_Duplicate( (cJSON*)other.m_write_root, true) )
     {
     }
     Root::~Root()
@@ -31,7 +31,7 @@ namespace JSON
             root.m_read_root = nullptr;
         }
 
-        return root;    
+        return root;
     }
     std::string Root::write( const Root & root )
     {
@@ -94,7 +94,7 @@ namespace JSON
         if ( read_root ) {
             json_val.m_node = cJSON_GetObjectItem( read_root, key );
         }
-        // for write json
+            // for write json
         else {
             if ( !write_root ) {
                 m_write_root = cJSON_CreateObject();
@@ -126,8 +126,8 @@ namespace JSON
     }
 */
     Value::Value()
-    : m_root( nullptr )
-    , m_node( nullptr )
+            : m_root( nullptr )
+            , m_node( nullptr )
     {
     }
     Value::~Value()
@@ -137,9 +137,9 @@ namespace JSON
     }
 
     Value::Value(const Value &other)
-    : m_root( other.m_root )
-    , m_node( other.m_node )
-    , m_key( other.m_key )
+            : m_root( other.m_root )
+            , m_node( other.m_node )
+            , m_key( other.m_key )
     {
     }
     void Value::operator=(int32_t value)
@@ -208,7 +208,7 @@ namespace JSON
         }
 
         return ret;
-    }   
+    }
     uint32_t Value::asUInt() const
     {
         int32_t ret = 0;
@@ -217,7 +217,7 @@ namespace JSON
         if ( node && node->type == cJSON_Number ) {
             ret = node->valueint;
         }
-        
+
         return ret;
     }
     std::string Value::asString() const
@@ -228,9 +228,9 @@ namespace JSON
         if ( node && node->type == cJSON_String ) {
             ret = std::string( node->valuestring );
         }
-        
+
         return ret;
-    }   
+    }
     bool Value::asBool() const
     {
         bool ret = false;
@@ -247,9 +247,9 @@ namespace JSON
                 ret = false;
             }
         }
-        return ret;       
-    }   
-    
+        return ret;
+    }
+
     Root Value::asJson() const
     {
         Root root;
@@ -258,7 +258,7 @@ namespace JSON
         if ( node && node->type == cJSON_Object ) {
             root.m_read_root = cJSON_Duplicate( node, true );
         }
-        return root;     
+        return root;
     }
 
     STR_ARRAY Value::asStringArrary() const
