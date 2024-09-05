@@ -69,9 +69,9 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
                 JSON::Root sig_share_json = JSON::Root::parse(sig_share_str);
                 if (sig_share_json.is_valid()) {
                     sig_share.index = sig_share_json["index"].asInt();
-                    sig_share.sig_share = safeheron::bignum::BN(sig_share_json["sig_share"].asString());
-                    sig_share.z = safeheron::bignum::BN(sig_share_json["z"].asString());
-                    sig_share.c = safeheron::bignum::BN(sig_share_json["c"].asString());
+                    sig_share.sig_share = safeheron::bignum::BN(sig_share_json["sig_share"].asString().c_str(), 10);
+                    sig_share.z = safeheron::bignum::BN(sig_share_json["z"].asString().c_str(), 10);
+                    sig_share.c = safeheron::bignum::BN(sig_share_json["c"].asString().c_str(), 10);
                     sig_arr.push_back(sig_share);
                 } else {
                     error_msg = format_msg("Request ID: %s, failed to parse sig_share JSON: %s", request_id.c_str(), sig_share_str.c_str());
@@ -85,9 +85,9 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 
     // Parse public_key
     JSON::Root public_key_json = req_root["public_key"].asJson();
-    public_key.e = safeheron::bignum::BN(public_key_json["e"]);
-    public_key.n = safeheron::bignum::BN(public_key_json["n"]);
-    INFO_OUTPUT_CONSOLE("--->after parse public_key: n %ld\n", public_key.n);
+    public_key.e = safeheron::bignum::BN(public_key_json["e"].asString().c_str(), 10);
+    public_key.n = safeheron::bignum::BN(public_key_json["n"].asString().c_str(), 10);
+    INFO_OUTPUT_CONSOLE("--->after parse public_key: n %s\n", public_key.n.ToHexStr().c_str());
 
     // Parse key_meta
     JSON::Root key_meta_json = req_root["key_meta"].asJson();
