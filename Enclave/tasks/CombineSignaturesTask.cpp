@@ -57,18 +57,15 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 
     // Parse sig_arr
     JSON::Root sig_shares_json = req_root["sig_shares"].asJson();
-    for (int i = 0; i < sig_shares_json.size(); ++i) {
+    for (int i = 0; i < 3; ++i) {
         JSON::Value item = sig_shares_json[i];
         if (item.is_valid()) {
-            JSON::Value sig_share_item = item["sig_share"];
-            if (sig_share_item.is_valid()) {
-                RSASigShare sig_share;
-                sig_share.set_index(sig_share_item["index"].asInt());
-                sig_share.set_sig_share(safeheron::bignum::BN(sig_share_item["sig_share"].asString().c_str(), 16));
-                sig_share.set_z(safeheron::bignum::BN(sig_share_item["z"].asString().c_str(), 16));
-                sig_share.set_c(safeheron::bignum::BN(sig_share_item["c"].asString().c_str(), 16));
-                sig_arr.push_back(sig_share);
-            }
+            RSASigShare sig_share;
+            sig_share.set_index(item["index"].asInt());
+            sig_share.set_sig_share(safeheron::bignum::BN(item["sig_share"].asString().c_str(), 16));
+            sig_share.set_z(safeheron::bignum::BN(item["z"].asString().c_str(), 16));
+            sig_share.set_c(safeheron::bignum::BN(item["c"].asString().c_str(), 16));
+            sig_arr.push_back(sig_share);
         }
     }
     INFO_OUTPUT_CONSOLE("--->after parse sig_shares: %ld\n", sig_arr.size());
@@ -84,7 +81,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     key_meta.set_k(key_meta_json["k"].asInt());
     key_meta.set_l(key_meta_json["l"].asInt());
     std::vector<safeheron::bignum::BN> vki_arr;
-    for (int i = 0; i < key_meta_json["vkiArr"].size(); ++i) {
+    for (int i = 0; i < 3; ++i) {
         JSON::Value item = key_meta_json["vkiArr"][i];
         if (item.is_valid()) {
             vki_arr.push_back(safeheron::bignum::BN(item.asString().c_str(), 16));
