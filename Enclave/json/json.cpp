@@ -1,5 +1,6 @@
 #include "json.h"
 #include "cJSON.h"
+#include "common/log_t.h"
 
 namespace JSON
 {
@@ -263,11 +264,16 @@ namespace JSON
         STR_ARRAY result;
         cJSON* node = (cJSON*)m_node;
 
-        if ( node && node->type == cJSON_Array ) {
-            int size = cJSON_GetArraySize( node );
-            for ( int i = 0; i < size; ++i ) {
-                result.push_back( cJSON_GetArrayItem( node, i )->valuestring );
+        if (node && node->type == cJSON_Array) {
+            int size = cJSON_GetArraySize(node);
+            for (int i = 0; i < size; ++i) {
+                cJSON* item = cJSON_GetArrayItem(node, i);
+                if (item && item->valuestring) {
+                    result.push_back(item->valuestring);
+                }
             }
+        }else{
+            INFO_OUTPUT_CONSOLE("Value::asStringArrary() failed, node is not an array\n");
         }
         return result;
     }
