@@ -56,7 +56,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     INFO_OUTPUT_CONSOLE("--->DOC: %s\n", doc.c_str());
 
     // Parse sig_arr
-    JSON::STR_ARRAY sig_shares_str_arr = req_root["sig_shares"].asStringArrary();
+    STR_ARRAY sig_shares_str_arr = req_root["sig_shares"].asStringArrary();
     for (const std::string &sig_share_str : sig_shares_str_arr) {
         JSON::Root sig_share_json = JSON::Root::parse(sig_share_str);
         if (sig_share_json.is_valid()) {
@@ -81,7 +81,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     key_meta.set_k(key_meta_json["k"].asInt());
     key_meta.set_l(key_meta_json["l"].asInt());
     std::vector<safeheron::bignum::BN> vki_arr;
-    JSON::STR_ARRAY vki_str_arr = key_meta_json["vkiArr"].asStringArrary();
+    STR_ARRAY vki_str_arr = key_meta_json["vkiArr"].asStringArrary();
     for (const std::string &vki_str : vki_str_arr) {
         vki_arr.push_back(safeheron::bignum::BN(vki_str.c_str(), 16));
     }
