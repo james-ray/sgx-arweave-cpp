@@ -1,8 +1,8 @@
 #include "json.h"
 #include "cJSON.h"
-#include "common/log_t.h"
 #include <cstdio>
 #include <stdlib.h>
+#include "common/log_t.h"
 
 namespace JSON
 {
