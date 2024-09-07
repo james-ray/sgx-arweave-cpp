@@ -99,7 +99,8 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     key_meta.set_vkv(safeheron::bignum::BN(key_meta_json["vkv"].asString().c_str(), 16));
 
     INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vki_arr %ld\n", key_meta.vki_arr().size());
-    std::string doc_pss = safeheron:tss_rsa::EncodeEMSA_PSS(doc,1024,safeheron::tss_rsa::SaltLength::AutoLength);
+    std::string doc_pss = safeheron::tss_rsa::EncodeEMSA_PSS(doc,1024,safeheron::tss_rsa::SaltLength::AutoLength);
+    INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: doc_pss %s\n", doc_pss.c_str());
     if (!safeheron::tss_rsa::CombineSignatures(doc_pss, sig_shares, public_key, key_meta, out_sig)) {
         error_msg = format_msg("Request ID: %s, CombineSignature failed!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
