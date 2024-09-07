@@ -33,7 +33,6 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     int ret = 0;
     JSON::Root req_root;
     std::string doc;
-    std::vector<RSASigShare> sig_arr;
     RSAPublicKey public_key;
     RSAKeyMeta key_meta;
     safeheron::bignum::BN out_sig;
@@ -55,9 +54,11 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     doc = req_root["doc"].asString();
     INFO_OUTPUT_CONSOLE("--->DOC: %s\n", doc.c_str());
 
-    // Parse sig_arr
+    // Parse sig_shares
+    std::vector<RSASigShare> sig_shares;
     STR_ARRAY sig_shares_str_arr = req_root["sig_shares"].asStringArrary();
     for (const std::string &sig_share_str : sig_shares_str_arr) {
+        INFO_OUTPUT_CONSOLE("--->try parsing sig_share_str: %s \n", sig_share_str.c_str());
         JSON::Root sig_share_json = JSON::Root::parse(sig_share_str);
         if (sig_share_json.is_valid()) {
             RSASigShare sig_share;
@@ -65,10 +66,16 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
             sig_share.set_sig_share(safeheron::bignum::BN(sig_share_json["sig_share"].asString().c_str(), 16));
             sig_share.set_z(safeheron::bignum::BN(sig_share_json["z"].asString().c_str(), 16));
             sig_share.set_c(safeheron::bignum::BN(sig_share_json["c"].asString().c_str(), 16));
-            sig_arr.push_back(sig_share);
+            sig_shares.push_back(sig_share);
+        }else{
+            INFO_OUTPUT_CONSOLE("--->sig_share_json is invalid: %s \n", sig_share_str.c_str());
+            error_msg = format_msg("Request ID: %s, sig_share_json is not valid! sig_share_str: %s",
+                                   request_id.c_str(), sig_share_str.c_str());
+            ERROR("%s", error_msg.c_str());
+            return TEE_ERROR_INVALID_PARAMETER;
         }
     }
-    INFO_OUTPUT_CONSOLE("--->after parse sig_shares: %ld\n", sig_arr.size());
+    INFO_OUTPUT_CONSOLE("--->after parse sig_shares: %zu\n", sig_shares.size());
 
     // Parse public_key
     JSON::Root public_key_json = req_root["public_key"].asJson();
@@ -92,8 +99,8 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     key_meta.set_vkv(safeheron::bignum::BN(key_meta_json["vkv"].asString().c_str(), 16));
 
     INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vki_arr %ld\n", key_meta.vki_arr().size());
-
-    if (!safeheron::tss_rsa::CombineSignatures(doc, sig_arr, public_key, key_meta, out_sig)) {
+    std::string doc_pss = safeheron:tss_rss::EncodeEMSA_PSS(doc,1024,safeheron::tss_rsa::SaltLength::AutoLength);
+    if (!safeheron::tss_rsa::CombineSignatures(doc_pss, sig_shares, public_key, key_meta, out_sig)) {
         error_msg = format_msg("Request ID: %s, CombineSignature failed!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
