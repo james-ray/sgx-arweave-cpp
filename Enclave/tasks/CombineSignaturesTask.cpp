@@ -9,8 +9,6 @@
 #include <crypto-curve/curve.h>
 #include <crypto-ecies/ecies.h>
 #include <crypto-encode/base64.h>
-#include <crypto-aes/aes.h>
-#include <crypto-aes/gcm.h>
 #include <crypto-bn/bn.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -31,7 +29,7 @@ using safeheron::aes::GCM;
 
 extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext *> g_keyContext_list;
-
+/*
 std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &ciphertext) {
     // Implement AES-GCM decryption
     GCM gcm;
@@ -71,7 +69,7 @@ std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const std::string &e
     std::string plaintext_seed = decrypt_with_aes_key(decrypted_aes_key_bytes, encrypted_seed);
 
     return plaintext_seed;
-}
+}*/
 
 int CombineSignaturesTask::get_task_type() {
     return eTaskType_CombineSignatures;
