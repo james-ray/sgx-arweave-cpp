@@ -9,6 +9,7 @@
 #include <crypto-curve/curve.h>
 #include <crypto-ecies/ecies.h>
 #include <crypto-encode/base64.h>
+#include "crypto-encode/hex.h"
 #include <crypto-bn/bn.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -150,12 +151,15 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vki_arr %ld\n", key_meta.vki_arr().size());
     //std::string doc_pss = safeheron::tss_rsa::EncodeEMSA_PSS(doc,1024,safeheron::tss_rsa::SaltLength::AutoLength);
     INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: doc_pss %s\n", doc_pss.c_str());
-    if (!safeheron::tss_rsa::CombineSignatures(doc_pss, sig_shares, public_key, key_meta, out_sig)) {
+    // Convert hex string to binary representation
+    std::string em_binary = safeheron::encode::hex::DecodeFromHex(doc_pss.c_str());
+
+    if (!safeheron::tss_rsa::CombineSignatures(em_binary, sig_shares, public_key, key_meta, out_sig)) {
         error_msg = format_msg("Request ID: %s, CombineSignature failed!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
     }
-    if (!safeheron::tss_rsa::VerifyEMSA_PSS(doc, 1024, safeheron::tss_rsa::SaltLength::AutoLength, doc_pss) ) {
+    if (!safeheron::tss_rsa::VerifyEMSA_PSS(doc, 1024, safeheron::tss_rsa::SaltLength::AutoLength, em_binary) ) {
         error_msg = format_msg("Request ID: %s, VerifyEMSA_PSS failed!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
