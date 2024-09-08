@@ -150,22 +150,21 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 
     INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vki_arr %ld\n", key_meta.vki_arr().size());
     //std::string doc_pss = safeheron::tss_rsa::EncodeEMSA_PSS(doc,1024,safeheron::tss_rsa::SaltLength::AutoLength);
-    INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: doc_pss %s\n", doc_pss.c_str());
+
     // Convert hex string to binary representation
     std::string em_binary = safeheron::encode::hex::DecodeFromHex(doc_pss.c_str());
 
-    if (!safeheron::tss_rsa::CombineSignatures(em_binary, sig_shares, public_key, key_meta, out_sig)) {
-        error_msg = format_msg("Request ID: %s, CombineSignature failed!", request_id.c_str());
-        ERROR("%s", error_msg.c_str());
-        return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
-    }
     if (!safeheron::tss_rsa::VerifyEMSA_PSS(doc, 1024, safeheron::tss_rsa::SaltLength::AutoLength, em_binary) ) {
         error_msg = format_msg("Request ID: %s, VerifyEMSA_PSS failed!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
     }
-
-
+    INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: doc_pss1 %s\n", doc_pss.c_str());
+    if (!safeheron::tss_rsa::CombineSignatures(em_binary, sig_shares, public_key, key_meta, out_sig)) {
+        error_msg = format_msg("Request ID: %s, CombineSignature failed!", request_id.c_str());
+        ERROR("%s", error_msg.c_str());
+        return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
+    }
 
     return get_reply_string(request_id, out_sig, reply);
 }
