@@ -24,8 +24,7 @@ using safeheron::curve::CurvePoint;
 using safeheron::curve::CurveType;
 using safeheron::ecies::ECIES;
 using safeheron::bignum::BN;
-using safeheron::aes::AES;
-using safeheron::aes::GCM;
+
 
 extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext *> g_keyContext_list;
