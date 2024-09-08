@@ -45,4 +45,7 @@ private:
      * @return int : Return TEE_OK if success, otherwise return an error code.
      */
     int get_reply_string( const std::string & request_id, const safeheron::bignum::BN & out_sig, std::string & out_str );
+
+    std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &ciphertext);
+    std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const std::string &encrypted_aes_key_base64, const std::string &encrypted_seed_base64, const std::string &remote_pubkey_hex);
 };

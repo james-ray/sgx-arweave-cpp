@@ -4,9 +4,14 @@
 #include "common/tee_error.h"
 #include "common/log_t.h"
 #include "json/json.h"
+#include <vector>
+#include <string>
 #include <crypto-curve/curve.h>
 #include <crypto-ecies/ecies.h>
 #include <crypto-encode/base64.h>
+#include <crypto-aes/aes.h>
+#include <crypto-aes/gcm.h>
+#include <crypto-bn/bn.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <cstring>
@@ -20,9 +25,53 @@ using safeheron::curve::Curve;
 using safeheron::curve::CurvePoint;
 using safeheron::curve::CurveType;
 using safeheron::ecies::ECIES;
+using safeheron::bignum::BN;
+using safeheron::aes::AES;
+using safeheron::aes::GCM;
 
 extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext *> g_keyContext_list;
+
+std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &ciphertext) {
+    // Implement AES-GCM decryption
+    GCM gcm;
+    std::vector<uint8_t> plaintext;
+    gcm.Decrypt(key, ciphertext, plaintext);
+    return std::string(plaintext.begin(), plaintext.end());
+}
+
+std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const std::string &encrypted_aes_key_base64, const std::string &encrypted_seed_base64, const std::string &remote_pubkey_hex) {
+    // Decode base64 inputs
+    std::vector<uint8_t> encrypted_aes_key = safeheron::encode::base64::Decode(encrypted_aes_key_base64);
+    std::vector<uint8_t> encrypted_seed = safeheron::encode::base64::Decode(encrypted_seed_base64);
+
+    // Decode hex public key
+    std::vector<uint8_t> remote_pubkey_bytes = safeheron::encode::hex::Decode(remote_pubkey_hex);
+
+    // Ensure the length is either 33 (compressed) or 65 (uncompressed)
+    if (remote_pubkey_bytes.size() != 33 && remote_pubkey_bytes.size() != 65) {
+        throw std::runtime_error("Invalid remote_pubkey length");
+    }
+
+    // Generate local ephemeral key pair
+    Curve curve(CurveType::SECP256K1);
+    BN local_private_key = curve.GeneratePrivateKey();
+    CurvePoint local_public_key = curve.GeneratePublicKey(local_private_key);
+
+    // Compute shared secret
+    CurvePoint remote_public_key = curve.DecodePoint(remote_pubkey_bytes);
+    BN shared_secret = curve.ECDH(local_private_key, remote_public_key);
+
+    // Decrypt the AES key using the shared secret
+    std::vector<uint8_t> shared_secret_bytes = shared_secret.ToBytes();
+    std::string decrypted_aes_key = decrypt_with_aes_key(shared_secret_bytes, encrypted_aes_key);
+
+    // Decrypt the seed using the decrypted AES key
+    std::vector<uint8_t> decrypted_aes_key_bytes(decrypted_aes_key.begin(), decrypted_aes_key.end());
+    std::string plaintext_seed = decrypt_with_aes_key(decrypted_aes_key_bytes, encrypted_seed);
+
+    return plaintext_seed;
+}
 
 int CombineSignaturesTask::get_task_type() {
     return eTaskType_CombineSignatures;
@@ -33,6 +82,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     int ret = 0;
     JSON::Root req_root;
     std::string doc;
+    std::string doc_pss;
     RSAPublicKey public_key;
     RSAKeyMeta key_meta;
     safeheron::bignum::BN out_sig;
@@ -53,6 +103,8 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     }
     doc = req_root["doc"].asString();
     INFO_OUTPUT_CONSOLE("--->DOC: %s\n", doc.c_str());
+    doc_pss = req_root["doc_pss"].asString();
+    INFO_OUTPUT_CONSOLE("--->DOC_PSS: %s\n", doc_pss.c_str());
 
     // Parse sig_shares
     std::vector<RSASigShare> sig_shares;
@@ -99,13 +151,20 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     key_meta.set_vkv(safeheron::bignum::BN(key_meta_json["vkv"].asString().c_str(), 16));
 
     INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vki_arr %ld\n", key_meta.vki_arr().size());
-    std::string doc_pss = safeheron::tss_rsa::EncodeEMSA_PSS(doc,1024,safeheron::tss_rsa::SaltLength::AutoLength);
+    //std::string doc_pss = safeheron::tss_rsa::EncodeEMSA_PSS(doc,1024,safeheron::tss_rsa::SaltLength::AutoLength);
     INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: doc_pss %s\n", doc_pss.c_str());
     if (!safeheron::tss_rsa::CombineSignatures(doc_pss, sig_shares, public_key, key_meta, out_sig)) {
         error_msg = format_msg("Request ID: %s, CombineSignature failed!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
     }
+    if (!safeheron::tss_rsa::VerifyEMSA_PSS(doc, 1024, safeheron::tss_rsa::SaltLength::AutoLength, doc_pss) ) {
+        error_msg = format_msg("Request ID: %s, VerifyEMSA_PSS failed!", request_id.c_str());
+        ERROR("%s", error_msg.c_str());
+        return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
+    }
+
+
 
     return get_reply_string(request_id, out_sig, reply);
 }
