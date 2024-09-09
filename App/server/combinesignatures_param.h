@@ -12,7 +12,7 @@
 #define FIELD_NAME_DOC                   "doc"
 #define FIELD_NAME_SIG_ARR               "sig_shares"
 #define FIELD_NAME_KEY_META              "key_meta"
-#define FIELD_NAME_PUBLIC_KEY            "public_key"
+#define FIELD_NAME_RSA_PUBLIC_KEY        "rsa_public_key"
 
 //#define FIELD_NAME_MSG_DIGEST            "msg_digest"
 

@@ -39,7 +39,7 @@ extern std::string g_private_key;
 extern int g_max_thread_task_count;
 
 // Thread pool and mutex
-std::list<ThreadTask*> msg_handler::s_thread_pool;
+std::list<ThreadTask *> msg_handler::s_thread_pool;
 std::mutex msg_handler::s_thread_lock;
 std::string g_plain_seeds;
 
@@ -51,25 +51,25 @@ std::string g_plain_seeds;
  * @param[in] keyshard_param : The context of GenerateKeyShard_Task.
  * @return int: return 0 if success, otherwise return an error code.
  */
-static int GenerateKeyShard_Task(void* keyshard_param )
-{
+static int GenerateKeyShard_Task(void *keyshard_param) {
     int ret;
     size_t result_len = 0;
-    char* result = nullptr;
+    char *result = nullptr;
     sgx_status_t sgx_status;
     std::string request_id;
     std::string pubkey_list_hash;
     std::string param_string;
     std::string enclave_report;
     std::string reply_body;
-    KeyShardParam* param = (KeyShardParam*) keyshard_param;
+    KeyShardParam *param = (KeyShardParam *) keyshard_param;
     web::json::value result_json;
 
     FUNC_BEGIN;
 
-    if ( !param ) {
-        ERROR( "keyshard_param is null in GenerateKeyShard()!" );
-        reply_body = msg_handler::GetMessageReply( false, APP_ERROR_INVALID_PARAMETER, "keyshard_param is null in GenerateKeyShard()!" );
+    if (!param) {
+        ERROR("keyshard_param is null in GenerateKeyShard()!");
+        reply_body = msg_handler::GetMessageReply(false, APP_ERROR_INVALID_PARAMETER,
+                                                  "keyshard_param is null in GenerateKeyShard()!");
         ret = APP_ERROR_INVALID_PARAMETER;
         goto _exit;
     }
@@ -77,39 +77,39 @@ static int GenerateKeyShard_Task(void* keyshard_param )
     request_id = param->request_id_;
 
     // Call ECALL to generate keys shards in TEE
-    if ( (sgx_status = ecall_run( global_eid, &ret, eTaskType_Generate, request_id.c_str(), 
-          param_string.c_str(), param_string.length(), &result, &result_len )) != SGX_SUCCESS) {
-        ERROR( "Request ID: %s,  ecall_run() raised an error! sgx_status: %d, error message: %s",
-            request_id.c_str(), sgx_status, t_strerror( (int)sgx_status));
-        reply_body = msg_handler::GetMessageReply( false, sgx_status, "ECALL raised an error!" );
+    if ((sgx_status = ecall_run(global_eid, &ret, eTaskType_Generate, request_id.c_str(),
+                                param_string.c_str(), param_string.length(), &result, &result_len)) != SGX_SUCCESS) {
+        ERROR("Request ID: %s,  ecall_run() raised an error! sgx_status: %d, error message: %s",
+              request_id.c_str(), sgx_status, t_strerror((int) sgx_status));
+        reply_body = msg_handler::GetMessageReply(false, sgx_status, "ECALL raised an error!");
         ret = sgx_status;
         goto _exit;
     }
-    if ( 0 != ret ) {
-        ERROR( "Request ID: %s,  ecall_run() failed with eTaskType_Generate! ret: 0x%x, error message: %s", 
-            request_id.c_str(), ret, result ? result : "" );
-        ERROR( "Request ID: %s,  param_string: %s", request_id.c_str(), param_string.c_str() );
-        reply_body = msg_handler::GetMessageReply( false, ret, result ? result : "" );
+    if (0 != ret) {
+        ERROR("Request ID: %s,  ecall_run() failed with eTaskType_Generate! ret: 0x%x, error message: %s",
+              request_id.c_str(), ret, result ? result : "");
+        ERROR("Request ID: %s,  param_string: %s", request_id.c_str(), param_string.c_str());
+        reply_body = msg_handler::GetMessageReply(false, ret, result ? result : "");
         goto _exit;
     }
     INFO_OUTPUT_CONSOLE("Request ID: %s, generate key shards successfully.", request_id.c_str());
 
     // Get public key list hash in result
-    result_json = json::value::parse( result );
-    pubkey_list_hash = result_json.at(FIELD_NAME_PUBKEY_LIST_HASH ).as_string();
+    result_json = json::value::parse(result);
+    pubkey_list_hash = result_json.at(FIELD_NAME_PUBKEY_LIST_HASH).as_string();
 
     // Generate enclave quote
-    if ( (ret = msg_handler::GenerateEnclaveReport(request_id, pubkey_list_hash, enclave_report)) != 0 ) {
-        ERROR( "Request ID: %s,  msg_handler::GenerateEnclaveReport() failed! pubkey_list_hash: %s, ret: %d",
-            request_id.c_str(), pubkey_list_hash.c_str(), ret );
-        reply_body = msg_handler::GetMessageReply( false, ret, "Failed to create enclave report!" );
+    if ((ret = msg_handler::GenerateEnclaveReport(request_id, pubkey_list_hash, enclave_report)) != 0) {
+        ERROR("Request ID: %s,  msg_handler::GenerateEnclaveReport() failed! pubkey_list_hash: %s, ret: %d",
+              request_id.c_str(), pubkey_list_hash.c_str(), ret);
+        reply_body = msg_handler::GetMessageReply(false, ret, "Failed to create enclave report!");
         goto _exit;
     }
 
     INFO_OUTPUT_CONSOLE("Request ID: %s, generate remote attestation report successfully.", request_id.c_str());
 
     // Add remote attestation report to JSON object
-    result_json["tee_report"] = json::value( enclave_report );
+    result_json["tee_report"] = json::value(enclave_report);
 
     // Serialize JSON object to a string
     reply_body = result_json.serialize();
@@ -119,20 +119,22 @@ static int GenerateKeyShard_Task(void* keyshard_param )
     // OK
     ret = 0;
 
-_exit:
+    _exit:
     try {
-        listen_svr::PostRequest( request_id, param->webhook_url_, reply_body ).wait();
-        ecall_set_generation_status( global_eid, &ret, request_id.c_str(), pubkey_list_hash.c_str(), eKeyStatus_Finished );
-        INFO_OUTPUT_CONSOLE("Request ID: %s, key shard generation result has post to callback address successfully.", request_id.c_str());
-    } catch ( const std::exception &e ) {
-        ecall_set_generation_status( global_eid, &ret, request_id.c_str(), pubkey_list_hash.c_str(), eKeyStatus_Error );
-        ERROR( "Request ID: %s Error exception: %s", request_id.c_str(), e.what() );
+        listen_svr::PostRequest(request_id, param->webhook_url_, reply_body).wait();
+        ecall_set_generation_status(global_eid, &ret, request_id.c_str(), pubkey_list_hash.c_str(),
+                                    eKeyStatus_Finished);
+        INFO_OUTPUT_CONSOLE("Request ID: %s, key shard generation result has post to callback address successfully.",
+                            request_id.c_str());
+    } catch (const std::exception &e) {
+        ecall_set_generation_status(global_eid, &ret, request_id.c_str(), pubkey_list_hash.c_str(), eKeyStatus_Error);
+        ERROR("Request ID: %s Error exception: %s", request_id.c_str(), e.what());
     }
-    if ( result ) {
-        free( result );
+    if (result) {
+        free(result);
         result = nullptr;
     }
-    if ( param ) {
+    if (param) {
         delete param;
         param = nullptr;
     }
@@ -142,37 +144,32 @@ _exit:
     return ret;
 }
 
-msg_handler::msg_handler()
-{
+msg_handler::msg_handler() {
 
 }
-msg_handler::~msg_handler()
-{
-    
+
+msg_handler::~msg_handler() {
+
 }
 
-int msg_handler::process( 
-    const std::string & req_id,
-    const std::string & req_path, 
-    const std::string & req_body, 
-    std::string & resp_body )
-{
+int msg_handler::process(
+        const std::string &req_id,
+        const std::string &req_path,
+        const std::string &req_body,
+        std::string &resp_body) {
     int ret = 0;
 
     FUNC_BEGIN;
 
-    if ( req_path == g_key_shard_generation_path ) {
+    if (req_path == g_key_shard_generation_path) {
         ret = GenerateKeyShard(req_id, req_body, resp_body);
-    }
-    else if ( req_path == g_key_shard_query_path ) {
+    } else if (req_path == g_key_shard_query_path) {
         ret = QueryKeyShardState(req_id, req_body, resp_body);
-    }
-    else if ( req_path == g_combine_sigs_path ) {
+    } else if (req_path == g_combine_sigs_path) {
         ret = CombineSignatures(req_id, req_body, resp_body);
-    }
-    else {
-        ERROR( "Request path is unknown! req_path: %s", req_path.c_str() );
-        resp_body = GetMessageReply( false, APP_ERROR_INVALID_REQ_PATH, "Request path is unknown!" );
+    } else {
+        ERROR("Request path is unknown! req_path: %s", req_path.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_REQ_PATH, "Request path is unknown!");
         ret = APP_ERROR_INVALID_REQ_PATH;
     }
 
@@ -182,35 +179,33 @@ int msg_handler::process(
 }
 
 // Construct a reply JSON string with nodes "success" and "message".
-std::string msg_handler::GetMessageReply( 
-    bool success, 
-    int code, 
-    const char* format, ... )
-{
-    char message[ 4096 ] = { 0 };
+std::string msg_handler::GetMessageReply(
+        bool success,
+        int code,
+        const char *format, ...) {
+    char message[4096] = {0};
     va_list args;
-    va_start( args, format ); 
-    vsnprintf( message, sizeof(message)-1, format, args );
-    va_end( args );
+    va_start(args, format);
+    vsnprintf(message, sizeof(message) - 1, format, args);
+    va_end(args);
 
-    json::value root = json::value::object( true );
-    root["success"] = json::value( success );
-    root["code"] = json::value( code );
-    root["message"] = json::value( message );
+    json::value root = json::value::object(true);
+    root["success"] = json::value(success);
+    root["code"] = json::value(code);
+    root["message"] = json::value(message);
     return root.serialize();
 }
 
 // Generate the report for current enclave
 int msg_handler::GenerateEnclaveReport(
-    const std::string & request_id, 
-    const std::string& pubkey_list_hash, 
-    std::string & report )
-{
+        const std::string &request_id,
+        const std::string &pubkey_list_hash,
+        std::string &report) {
     int ret = 0;
     sgx_status_t sgx_status = SGX_SUCCESS;
     quote3_error_t qe3_ret = SGX_QL_SUCCESS;
     uint32_t quote_size = 0;
-    uint8_t* p_quote_buffer = nullptr;
+    uint8_t *p_quote_buffer = nullptr;
     sgx_target_info_t qe_target_info;
     sgx_report_t app_report;
     sgx_quote3_t *p_quote = nullptr;
@@ -223,17 +218,17 @@ int msg_handler::GenerateEnclaveReport(
 
     FUNC_BEGIN;
 
-    if ( request_id.length() == 0 ) {
-        ERROR( "Request ID is null!" );
+    if (request_id.length() == 0) {
+        ERROR("Request ID is null!");
         return -1;
     }
-    if ( pubkey_list_hash.length() == 0 ) {
-        ERROR( "Request ID: %s, pubkey_list_hash is null!", request_id.c_str() );
+    if (pubkey_list_hash.length() == 0) {
+        ERROR("Request ID: %s, pubkey_list_hash is null!", request_id.c_str());
         return -1;
     }
-    INFO( "Request ID: %s, pubkey_list_hash: %s", request_id.c_str(), pubkey_list_hash.c_str() );
+    INFO("Request ID: %s, pubkey_list_hash: %s", request_id.c_str(), pubkey_list_hash.c_str());
 
-    if ( out_of_proc ) {
+    if (out_of_proc) {
         is_out_of_proc = true;
     }
 
@@ -243,12 +238,11 @@ int msg_handler::GenerateEnclaveReport(
     // mode which is the default mode, you only need to install libsgx-dcap-ql. If you want to use the
     // out-of-proc mode, you need to install libsgx-quote-ex as well. This sample is built to demo both 2
     // modes, so you need to install libsgx-quote-ex to enable the out-of-proc mode.
-    if (!is_out_of_proc)
-    {
+    if (!is_out_of_proc) {
         // Following functions are valid in Linux in-proc mode only.
         qe3_ret = sgx_qe_set_enclave_load_policy(SGX_QL_PERSISTENT);
-        if(SGX_QL_SUCCESS != qe3_ret) {
-            ERROR( "Request ID: %s, Error in set enclave load policy: 0x%04x", request_id.c_str(), qe3_ret );
+        if (SGX_QL_SUCCESS != qe3_ret) {
+            ERROR("Request ID: %s, Error in set enclave load policy: 0x%04x", request_id.c_str(), qe3_ret);
             ret = -1;
             goto _exit;
         }
@@ -256,13 +250,14 @@ int msg_handler::GenerateEnclaveReport(
         // Try to load PCE and QE3 from Ubuntu-like OS system path
         if (SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_pce.signed.so.1") ||
             SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_qe3.signed.so.1") ||
-            SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_IDE_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_id_enclave.signed.so.1")) {
+            SGX_QL_SUCCESS !=
+            sgx_ql_set_path(SGX_QL_IDE_PATH, "/usr/lib/x86_64-linux-gnu/libsgx_id_enclave.signed.so.1")) {
 
             // Try to load PCE and QE3 from RHEL-like OS system path
             if (SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_PCE_PATH, "/usr/lib64/libsgx_pce.signed.so.1") ||
                 SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_QE3_PATH, "/usr/lib64/libsgx_qe3.signed.so.1") ||
                 SGX_QL_SUCCESS != sgx_ql_set_path(SGX_QL_IDE_PATH, "/usr/lib64/libsgx_id_enclave.signed.so.1")) {
-                ERROR( "Request ID: %s, Error in set PCE/QE3/IDE directory.", request_id.c_str() );
+                ERROR("Request ID: %s, Error in set PCE/QE3/IDE directory.", request_id.c_str());
                 ret = -1;
                 goto _exit;
             }
@@ -273,7 +268,8 @@ int msg_handler::GenerateEnclaveReport(
             qe3_ret = sgx_ql_set_path(SGX_QL_QPL_PATH, "/usr/lib64/libdcap_quoteprov.so.1");
             if (SGX_QL_SUCCESS != qe3_ret) {
                 // Ignore the error, because user may want to get cert type=3 quote
-                WARN( "Request ID: %s, Warning: Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.", request_id.c_str() );
+                WARN("Request ID: %s, Warning: Cannot set QPL directory, you may get ECDSA quote with `Encrypted PPID` cert type.",
+                     request_id.c_str());
             }
         }
     }
@@ -281,29 +277,29 @@ int msg_handler::GenerateEnclaveReport(
 
     qe3_ret = sgx_qe_get_target_info(&qe_target_info);
     if (SGX_QL_SUCCESS != qe3_ret) {
-        ERROR( "Request ID: %s, Error in sgx_qe_get_target_info. 0x%04x", request_id.c_str(), qe3_ret );
+        ERROR("Request ID: %s, Error in sgx_qe_get_target_info. 0x%04x", request_id.c_str(), qe3_ret);
         ret = -1;
         goto _exit;
     }
 
-    sgx_status = ecall_create_report(global_eid, &ret, (char*)request_id.c_str(), 
-         (char*)pubkey_list_hash.c_str(), &qe_target_info, &app_report);
-    if ( (SGX_SUCCESS != sgx_status) || (0 != ret) ) {
-        ERROR( "Request ID: %s, Call to get_app_enclave_report() failed", request_id.c_str() );
+    sgx_status = ecall_create_report(global_eid, &ret, (char *) request_id.c_str(),
+                                     (char *) pubkey_list_hash.c_str(), &qe_target_info, &app_report);
+    if ((SGX_SUCCESS != sgx_status) || (0 != ret)) {
+        ERROR("Request ID: %s, Call to get_app_enclave_report() failed", request_id.c_str());
         ret = -1;
         goto _exit;
     }
 
     qe3_ret = sgx_qe_get_quote_size(&quote_size);
     if (SGX_QL_SUCCESS != qe3_ret) {
-        ERROR( "Request ID: %s, Error in sgx_qe_get_quote_size. 0x%04x", request_id.c_str(), qe3_ret );
+        ERROR("Request ID: %s, Error in sgx_qe_get_quote_size. 0x%04x", request_id.c_str(), qe3_ret);
         ret = -1;
         goto _exit;
     }
 
-    p_quote_buffer = (uint8_t*)malloc(quote_size);
+    p_quote_buffer = (uint8_t *) malloc(quote_size);
     if (nullptr == p_quote_buffer) {
-        ERROR( "Request ID: %s, Couldn't allocate quote_buffer", request_id.c_str() );
+        ERROR("Request ID: %s, Couldn't allocate quote_buffer", request_id.c_str());
         ret = -1;
         goto _exit;
     }
@@ -314,15 +310,15 @@ int msg_handler::GenerateEnclaveReport(
                                quote_size,
                                p_quote_buffer);
     if (SGX_QL_SUCCESS != qe3_ret) {
-        ERROR( "Request ID: %s, Error in sgx_qe_get_quote. 0x%04x", request_id.c_str(), qe3_ret );
+        ERROR("Request ID: %s, Error in sgx_qe_get_quote. 0x%04x", request_id.c_str(), qe3_ret);
         ret = -1;
         goto _exit;
     }
 
-    p_quote = (sgx_quote3_t*)p_quote_buffer;
-    p_sig_data = (sgx_ql_ecdsa_sig_data_t *)p_quote->signature_data;
-    p_auth_data = (sgx_ql_auth_data_t*)p_sig_data->auth_certification_data;
-    p_cert_data = (sgx_ql_certification_data_t *)((uint8_t *)p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);
+    p_quote = (sgx_quote3_t *) p_quote_buffer;
+    p_sig_data = (sgx_ql_ecdsa_sig_data_t *) p_quote->signature_data;
+    p_auth_data = (sgx_ql_auth_data_t *) p_sig_data->auth_certification_data;
+    p_cert_data = (sgx_ql_certification_data_t * )((uint8_t *) p_auth_data + sizeof(*p_auth_data) + p_auth_data->size);
 
 #if defined(DEBUG_ARWEAVE)
 #if _WIN32
@@ -337,13 +333,12 @@ int msg_handler::GenerateEnclaveReport(
     }
 #endif
 
-    report = safeheron::encode::base64::EncodeToBase64( p_quote_buffer, quote_size );
+    report = safeheron::encode::base64::EncodeToBase64(p_quote_buffer, quote_size);
 
-    if ( !is_out_of_proc )
-    {
+    if (!is_out_of_proc) {
         qe3_ret = sgx_qe_cleanup_by_policy();
-        if (SGX_QL_SUCCESS != qe3_ret ) {
-            ERROR( "Request ID: %s, Error in cleanup enclave load policy: 0x%04x", request_id.c_str(), qe3_ret );
+        if (SGX_QL_SUCCESS != qe3_ret) {
+            ERROR("Request ID: %s, Error in cleanup enclave load policy: 0x%04x", request_id.c_str(), qe3_ret);
             ret = -1;
             goto _exit;
         }
@@ -353,107 +348,110 @@ int msg_handler::GenerateEnclaveReport(
     ret = 0;
     FUNC_END;
 
-_exit:
-    if ( !p_quote_buffer ) {
-        free( p_quote_buffer );
+    _exit:
+    if (!p_quote_buffer) {
+        free(p_quote_buffer);
         p_quote_buffer = nullptr;
     }
     return ret;
 }
 
 // Free all threads which are stopped in s_thread_pool
-void msg_handler::ReleaseStoppedThreads()
-{
-    std::lock_guard<std::mutex> lock( s_thread_lock );
+void msg_handler::ReleaseStoppedThreads() {
+    std::lock_guard <std::mutex> lock(s_thread_lock);
 
     // Free all stopped task threads in pool
-    for ( auto it = s_thread_pool.begin(); it != s_thread_pool.end(); ) {
-        if ( (*it)->is_stopped() ) {
+    for (auto it = s_thread_pool.begin(); it != s_thread_pool.end();) {
+        if ((*it)->is_stopped()) {
             delete *it;
-            it = s_thread_pool.erase( it );
-        }
-        else {
+            it = s_thread_pool.erase(it);
+        } else {
             it++;
         }
     }
 }
 
 // Free all thread objects in s_thread_pool
-void msg_handler::DestroyThreadPool()
-{
-    std::lock_guard<std::mutex> lock( s_thread_lock );
-    for ( auto it = s_thread_pool.begin(); 
-          it != s_thread_pool.end(); 
-        ) {
+void msg_handler::DestroyThreadPool() {
+    std::lock_guard <std::mutex> lock(s_thread_lock);
+    for (auto it = s_thread_pool.begin();
+         it != s_thread_pool.end();
+            ) {
         delete *it;
-        it = s_thread_pool.erase( it );
+        it = s_thread_pool.erase(it);
     }
 }
 
 // Generating key shard message handler
 int msg_handler::GenerateKeyShard(
-    const std::string & req_id, 
-    const std::string & req_body, 
-    std::string & resp_body )
-{
+        const std::string &req_id,
+        const std::string &req_body,
+        std::string &resp_body) {
     int ret = 0;
-    KeyShardParam* req_param = nullptr;
+    KeyShardParam *req_param = nullptr;
 
     FUNC_BEGIN;
-    
+
     // Return if thread pool has no thread resource
-    std::lock_guard<std::mutex> lock( s_thread_lock );
-    if ( s_thread_pool.size() >= g_max_thread_task_count ) {
-        resp_body = GetMessageReply( false, APP_ERROR_SERVER_IS_BUSY, "TEE service is busy!" );
+    std::lock_guard <std::mutex> lock(s_thread_lock);
+    if (s_thread_pool.size() >= g_max_thread_task_count) {
+        resp_body = GetMessageReply(false, APP_ERROR_SERVER_IS_BUSY, "TEE service is busy!");
         return APP_ERROR_SERVER_IS_BUSY;
     }
     s_thread_lock.unlock();
 
     // All parameters must be valid!
-    if ( !(req_param = new KeyShardParam(req_body )) ) {
-        ERROR( "Request ID: %s, new KeyShardParam object failed!", req_id.c_str() );
-        resp_body = GetMessageReply( false, APP_ERROR_MALLOC_FAILED, "new KeyShardParam object failed!" );
+    if (!(req_param = new KeyShardParam(req_body))) {
+        ERROR("Request ID: %s, new KeyShardParam object failed!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_MALLOC_FAILED, "new KeyShardParam object failed!");
         return APP_ERROR_MALLOC_FAILED;
     }
-    if ( !req_param->check_pubkey_list() ) {
-        ERROR( "Request ID: %s, User pubkey list is invalid! size: %d", req_id.c_str(), (int)req_param->pubkey_list_.size() );
-        resp_body = GetMessageReply( false, APP_ERROR_INVALID_PUBLIC_KEY_LIST, "Field '%s' value is invalid!", FIELD_NAME_USER_PUBLICKEY_LIST );
+    if (!req_param->check_pubkey_list()) {
+        ERROR("Request ID: %s, User pubkey list is invalid! size: %d", req_id.c_str(),
+              (int) req_param->pubkey_list_.size());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PUBLIC_KEY_LIST, "Field '%s' value is invalid!",
+                                    FIELD_NAME_USER_PUBLICKEY_LIST);
         return APP_ERROR_INVALID_PUBLIC_KEY_LIST;
     }
-    if ( !req_param->check_k() ) {
-        ERROR( "Request ID: %s, Parameter k is invalid! k: %d", req_id.c_str(), req_param->k_ );
-        resp_body = GetMessageReply( false, APP_ERROR_INVALID_K, "Field '%s' value is invalid!", FIELD_NAME_NUMERATOR_K );
+    if (!req_param->check_k()) {
+        ERROR("Request ID: %s, Parameter k is invalid! k: %d", req_id.c_str(), req_param->k_);
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_K, "Field '%s' value is invalid!", FIELD_NAME_NUMERATOR_K);
         return APP_ERROR_INVALID_K;
     }
-    if ( !req_param->check_l() ) {
-        ERROR( "Request ID: %s, Parameter l is invalid! l: %d", req_id.c_str(), req_param->l_ );
-        resp_body = GetMessageReply( false, APP_ERROR_INVALID_L, "Field '%s' value is invalid!", FIELD_NAME_DENOMINATOR_L );
+    if (!req_param->check_l()) {
+        ERROR("Request ID: %s, Parameter l is invalid! l: %d", req_id.c_str(), req_param->l_);
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_L, "Field '%s' value is invalid!",
+                                    FIELD_NAME_DENOMINATOR_L);
         return APP_ERROR_INVALID_L;
     }
-    if ( !req_param->check_key_length() ) {
-        ERROR( "Request ID: %s, Parameter key length is invalid! key_length: %d", req_id.c_str(), req_param->key_length_ );
-        resp_body = GetMessageReply( false, APP_ERROR_INVALID_KEYBITS, "Field '%s' value is invalid!", FIELD_NAME_KEY_LENGTH );
+    if (!req_param->check_key_length()) {
+        ERROR("Request ID: %s, Parameter key length is invalid! key_length: %d", req_id.c_str(),
+              req_param->key_length_);
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_KEYBITS, "Field '%s' value is invalid!",
+                                    FIELD_NAME_KEY_LENGTH);
         return APP_ERROR_INVALID_KEYBITS;
     }
-    if ( !req_param->check_webhook_url() ) {
-        ERROR( "Request ID: %s, Parameter webhook url is invalid! webhook url: %s", req_id.c_str(), req_param->webhook_url_.c_str() );
-        resp_body = GetMessageReply( false, APP_ERROR_INVALID_WEBHOOK_URL, "Field '%s' value is invalid!", FIELD_NAME_WEBHOOK_URL );
+    if (!req_param->check_webhook_url()) {
+        ERROR("Request ID: %s, Parameter webhook url is invalid! webhook url: %s", req_id.c_str(),
+              req_param->webhook_url_.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_WEBHOOK_URL, "Field '%s' value is invalid!",
+                                    FIELD_NAME_WEBHOOK_URL);
         return APP_ERROR_INVALID_WEBHOOK_URL;
     }
     req_param->request_id_ = req_id;
 
     // Create a thread for generation task
-    ThreadTask* task = new ThreadTask(GenerateKeyShard_Task, req_param);
-    if ( (ret = task->start()) != 0 ) {
-        resp_body = GetMessageReply( false, APP_ERROR_FAILED_TO_START_THREAD, "Create task thread failed!" );
+    ThreadTask *task = new ThreadTask(GenerateKeyShard_Task, req_param);
+    if ((ret = task->start()) != 0) {
+        resp_body = GetMessageReply(false, APP_ERROR_FAILED_TO_START_THREAD, "Create task thread failed!");
         return APP_ERROR_FAILED_TO_START_THREAD;
     }
     s_thread_lock.lock();
-    s_thread_pool.push_back( task );
+    s_thread_pool.push_back(task);
     s_thread_lock.unlock();
 
     // return OK
-    resp_body = GetMessageReply( true, 0, "Request has been accepted." );
+    resp_body = GetMessageReply(true, 0, "Request has been accepted.");
 
     FUNC_END;
 
@@ -461,13 +459,12 @@ int msg_handler::GenerateKeyShard(
 }
 
 int msg_handler::QueryKeyShardState(
-    const std::string & req_id, 
-    const std::string & req_body, 
-    std::string & resp_body )
-{
+        const std::string &req_id,
+        const std::string &req_body,
+        std::string &resp_body) {
     int ret = 0;
     size_t result_len = 0;
-    char* result = nullptr;
+    char *result = nullptr;
     sgx_status_t sgx_status;
     std::string pubkey_list_hash;
     web::json::value req_json = json::value::parse(req_body);
@@ -475,29 +472,30 @@ int msg_handler::QueryKeyShardState(
     FUNC_BEGIN;
 
     // return error message if request body is invalid
-    if ( !req_json.has_field(FIELD_NAME_PUBKEY_LIST_HASH ) ||
-         !req_json.at(FIELD_NAME_PUBKEY_LIST_HASH ).is_string() ) {
+    if (!req_json.has_field(FIELD_NAME_PUBKEY_LIST_HASH) ||
+        !req_json.at(FIELD_NAME_PUBKEY_LIST_HASH).is_string()) {
         ERROR("Request ID: %s, %s node is not in request body or has a wrong type!",
-              req_id.c_str(), FIELD_NAME_PUBKEY_LIST_HASH );
-        resp_body = GetMessageReply( false, APP_ERROR_INVALID_PARAMETER,  "invalid input, please check your data.");
+              req_id.c_str(), FIELD_NAME_PUBKEY_LIST_HASH);
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
         ret = -1;
         goto _exit;
     }
-    pubkey_list_hash = req_json.at(FIELD_NAME_PUBKEY_LIST_HASH ).as_string();
+    pubkey_list_hash = req_json.at(FIELD_NAME_PUBKEY_LIST_HASH).as_string();
 
     // call ECALL to query keys status in TEE
-    if ( (sgx_status = ecall_run( global_eid, &ret, eTaskType_Query, req_id.c_str(), 
-          pubkey_list_hash.c_str(), pubkey_list_hash.length(), &result, &result_len )) != SGX_SUCCESS) {
-        ERROR( "Request ID: %s,  ecall_run() encounter an error! sgx_status: %d, error message: %s", 
-            req_id.c_str(), sgx_status, t_strerror( (int)sgx_status));
-        resp_body = GetMessageReply( false, sgx_status, "ECALL encounter an error!");
+    if ((sgx_status = ecall_run(global_eid, &ret, eTaskType_Query, req_id.c_str(),
+                                pubkey_list_hash.c_str(), pubkey_list_hash.length(), &result, &result_len)) !=
+        SGX_SUCCESS) {
+        ERROR("Request ID: %s,  ecall_run() encounter an error! sgx_status: %d, error message: %s",
+              req_id.c_str(), sgx_status, t_strerror((int) sgx_status));
+        resp_body = GetMessageReply(false, sgx_status, "ECALL encounter an error!");
         ret = -1;
         goto _exit;
     }
-    if ( 0 != ret ) {
-        ERROR( "Request ID: %s,  ecall_run() failed with eTaskType_Query! pubkey_list_hash: %s, ret: 0x%x, error message: %s", 
-            req_id.c_str(), pubkey_list_hash.c_str(), ret, result ? result : "" );
-        resp_body = GetMessageReply( false, ret, result ? result : "" );
+    if (0 != ret) {
+        ERROR("Request ID: %s,  ecall_run() failed with eTaskType_Query! pubkey_list_hash: %s, ret: 0x%x, error message: %s",
+              req_id.c_str(), pubkey_list_hash.c_str(), ret, result ? result : "");
+        resp_body = GetMessageReply(false, ret, result ? result : "");
         ret = -1;
         goto _exit;
     }
@@ -508,29 +506,28 @@ int msg_handler::QueryKeyShardState(
 
     FUNC_END;
 
-_exit:
-    if ( result ) {
-        free( result );
+    _exit:
+    if (result) {
+        free(result);
         result = nullptr;
     }
     return ret;
 }
 
 int msg_handler::QueryRootKey(
-        const std::string & req_id,
-        const std::string & req_body,
-        std::string & resp_body )
-{
+        const std::string &req_id,
+        const std::string &req_body,
+        std::string &resp_body) {
     int ret = 0;
     size_t result_len = 0;
-    char* result = nullptr;
+    char *result = nullptr;
     sgx_status_t sgx_status;
     std::string pubkey_list_hash;
     std::string request_id;
     size_t index = 0;
     std::string token;
     std::istringstream tokenStream;
-    std::vector<std::string> plain_seeds;
+    std::vector <std::string> plain_seeds;
     std::istringstream seedStream;
     web::json::value response_json;
 
@@ -597,13 +594,12 @@ int msg_handler::QueryRootKey(
 }
 
 int msg_handler::CombineSignatures(
-        const std::string & req_id,
-        const std::string & req_body,
-        std::string & resp_body )
-{
+        const std::string &req_id,
+        const std::string &req_body,
+        std::string &resp_body) {
     int ret = 0;
     size_t result_len = 0;
-    char* result = nullptr;
+    char *result = nullptr;
     sgx_status_t sgx_status;
     std::string param_string;
     web::json::value req_json = json::value::parse(req_body);
@@ -614,7 +610,7 @@ int msg_handler::CombineSignatures(
     // Validate request body
     if (!req_json.has_field(FIELD_NAME_DOC) || !req_json.at(FIELD_NAME_DOC).is_string() ||
         !req_json.has_field(FIELD_NAME_SIG_ARR) || !req_json.at(FIELD_NAME_SIG_ARR).is_array() ||
-        !req_json.has_field(FIELD_NAME_PUBLIC_KEY) || !req_json.at(FIELD_NAME_PUBLIC_KEY).is_object() ||
+        !req_json.has_field(FIELD_NAME_RSA_PUBLIC_KEY) || !req_json.at(FIELD_NAME_RSA_PUBLIC_KEY).is_object() ||
         !req_json.has_field(FIELD_NAME_KEY_META) || !req_json.at(FIELD_NAME_KEY_META).is_object()) {
         ERROR("Request ID: %s, invalid input data!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
@@ -632,7 +628,7 @@ int msg_handler::CombineSignatures(
     if ((sgx_status = ecall_run(global_eid, &ret, eTaskType_CombineSignatures, req_id.c_str(),
                                 param_string.c_str(), param_string.length(), &result, &result_len)) != SGX_SUCCESS) {
         ERROR("Request ID: %s, ecall_run() raised an error! sgx_status: %d, error message: %s",
-              req_id.c_str(), sgx_status, t_strerror((int)sgx_status));
+              req_id.c_str(), sgx_status, t_strerror((int) sgx_status));
         resp_body = GetMessageReply(false, sgx_status, "ECALL raised an error!");
         ret = sgx_status;
         goto _exit;
