@@ -24,7 +24,6 @@
 using safeheron::curve::Curve;
 using safeheron::curve::CurvePoint;
 using safeheron::curve::CurveType;
-using safeheron::bignum::BN;
 
 
 extern std::mutex g_list_mutex;

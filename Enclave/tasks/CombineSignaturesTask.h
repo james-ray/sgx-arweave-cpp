@@ -11,6 +11,7 @@
 using safeheron::tss_rsa::RSASigShare;
 using safeheron::tss_rsa::RSAPublicKey;
 using safeheron::tss_rsa::RSAKeyMeta;
+using safeheron::bignum::BN
 
 class CombineSignaturesTask: public Task
 {
