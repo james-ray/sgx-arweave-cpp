@@ -143,15 +143,6 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     doc_pss = req_root["doc_pss"].asString();
     INFO_OUTPUT_CONSOLE("--->DOC_PSS: %s\n", doc_pss.c_str());
 
-    // Parse sig_shares
-    std::vector <RSASigShare> sig_shares;
-    STR_ARRAY sig_shares_str_arr = req_root["sig_shares"].asStringArrary();
-    for (const std::string &sig_share_str: sig_shares_str_arr) {
-        RSASigShare sig_share;
-        sig_share.FromHexStr(sig_share_str);
-        sig_shares.push_back(sig_share);
-    }
-
     // Parse public_key_list, encrypted_aes_key_list, and encrypted_seed_list
     STR_ARRAY public_key_list = req_root["public_key_list"].asStringArrary();
     STR_ARRAY encrypted_aes_key_list = req_root["encrypted_aes_key_list"].asStringArrary();
@@ -163,7 +154,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     if (!private_key_file.is_open()) {
         error_msg = format_msg("Request ID: %s, failed to open private key file!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
-        return TEE_ERROR_FILE_NOT_FOUND;
+        return TEE_ERROR_INTERNAL_ERROR;
     }
     std::string private_key_str((std::istreambuf_iterator<char>(private_key_file)), std::istreambuf_iterator<char>());
     local_private_key.FromHexStr(private_key_str);
@@ -255,7 +246,7 @@ int CombineSignaturesTask::get_reply_string(const std::string &request_id, const
     std::string sig_str;
     out_sig.ToHexStr(sig_str);
     reply_json["signature"] = sig_str;
-    reply_json["plain_seeds"] = sig_str
+    reply_json["plain_seeds"] = sig_str;
     out_str = JSON::Root::write(reply_json);
     return 0;
 }
