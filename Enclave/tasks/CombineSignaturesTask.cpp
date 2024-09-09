@@ -32,14 +32,14 @@ extern std::map<std::string, KeyShardContext *> g_keyContext_list;
 
 BN CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std::vector<uint8_t> &remote_pubkey_bytes) {
     // Initialize the curve
-    const Curve *curve = safeheron::curve::GetCurveParam(safeheron::curve::CurveType::P256);
+    const Curve *curve = safeheron::curve::GetCurveParam(CurveType::P256);
 
     // Decode the remote public key
     CurvePoint remote_public_key;
     if (remote_pubkey_bytes.size() == 33) {
-        remote_public_key.DecodeCompressed(remote_pubkey_bytes.data(), safeheron::curve::CurveType::P256);
+        remote_public_key.DecodeCompressed(remote_pubkey_bytes.data(), CurveType::P256);
     } else if (remote_pubkey_bytes.size() == 65) {
-        remote_public_key.DecodeFull(remote_pubkey_bytes.data(), safeheron::curve::CurveType::P256);
+        remote_public_key.DecodeFull(remote_pubkey_bytes.data(), CurveType::P256);
     } else {
         throw std::runtime_error("Invalid remote_pubkey length");
     }
@@ -76,11 +76,11 @@ std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_
 
 std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const BN &local_private_key, const std::string &encrypted_aes_key_base64, const std::string &encrypted_seed_base64, const std::string &remote_pubkey_hex) {
     // Decode base64 inputs
-    std::vector<uint8_t> encrypted_aes_key = safeheron::encode::base64::Decode(encrypted_aes_key_base64);
-    std::vector<uint8_t> encrypted_seed = safeheron::encode::base64::Decode(encrypted_seed_base64);
+    std::vector<uint8_t> encrypted_aes_key = safeheron::encode::base64::DecodeFromBase64(encrypted_aes_key_base64);
+    std::vector<uint8_t> encrypted_seed = safeheron::encode::base64::DecodeFromBase64(encrypted_seed_base64);
 
     // Decode hex public key
-    std::vector<uint8_t> remote_pubkey_bytes = safeheron::encode::hex::Decode(remote_pubkey_hex);
+    std::vector<uint8_t> remote_pubkey_bytes = safeheron::encode::hex::DecodeFromHex(remote_pubkey_hex);
 
     // Ensure the length is either 33 (compressed) or 65 (uncompressed)
     if (remote_pubkey_bytes.size() != 33 && remote_pubkey_bytes.size() != 65) {
@@ -88,10 +88,10 @@ std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const BN &local_priv
     }
 
     // Compute shared secret
-    BN shared_secret = compute_shared_secret(local_private_key, remote_pubkey_bytes, CurveType::SECP256K1);
+    BN shared_secret = compute_shared_secret(local_private_key, remote_pubkey_bytes);
 
     // Decrypt the AES key using the shared secret
-    std::vector<uint8_t> shared_secret_bytes = shared_secret.ToBytes();
+    std::vector<uint8_t> shared_secret_bytes = shared_secret.ToBytesBE();
     std::string decrypted_aes_key = decrypt_with_aes_key(shared_secret_bytes, encrypted_aes_key);
 
     // Decrypt the seed using the decrypted AES key
