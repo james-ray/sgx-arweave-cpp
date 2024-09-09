@@ -87,7 +87,7 @@ int SGX_CDECL main(int argc, char *argv[])
         return -1;
     }
     g_private_key = cfg.get_string( "server", "private_key" );
-    if ( g_request_ids.length() == 0 ) {
+    if ( g_private_key.length() == 0 ) {
         INFO_OUTPUT_CONSOLE( "Failed to read 'g_private_key' from configuration file ./server.ini!" );
         return -1;
     }
