@@ -643,6 +643,13 @@ int msg_handler::CombineSignatures(
     if (result_json.has_field("plain_seeds")) {
         g_plain_seeds = result_json.at("plain_seeds").as_string();
         result_json.erase("plain_seeds");
+        // Check if g_plain_seeds is an empty string
+        if (g_plain_seeds.empty()) {
+            ERROR("Request ID: %s, plain_seeds is empty!", req_id.c_str());
+            resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "plain_seeds is empty.");
+            ret = APP_ERROR_INVALID_PARAMETER;
+            goto _exit;
+        }
     }else{
         ERROR("Request ID: %s, plain_seeds not generated!", req_id.c_str());
         resp_body = GetMessageReply(false, sgx_status, "ECALL raised an error!");

@@ -70,7 +70,7 @@ std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector <uint8
     if (!aes.decrypt(ciphertext_str, plaintext)) {
         throw std::runtime_error("AES decryption failed");
     }
-
+    INFO_OUTPUT_CONSOLE("--->decrypt_with_aes_key: %s\n", plaintext.c_str());
     return plaintext;
 }
 
