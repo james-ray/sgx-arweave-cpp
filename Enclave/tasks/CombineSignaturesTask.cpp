@@ -37,9 +37,9 @@ BN CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std
     // Decode the remote public key
     CurvePoint remote_public_key;
     if (remote_pubkey_bytes.size() == 33) {
-        remote_public_key.DecodeCompressed(remote_pubkey_bytes.data(), curve_type);
+        remote_public_key.DecodeCompressed(remote_pubkey_bytes.data(), safeheron::curve::CurveType::P256);
     } else if (remote_pubkey_bytes.size() == 65) {
-        remote_public_key.DecodeFull(remote_pubkey_bytes.data(), curve_type);
+        remote_public_key.DecodeFull(remote_pubkey_bytes.data(), safeheron::curve::CurveType::P256);
     } else {
         throw std::runtime_error("Invalid remote_pubkey length");
     }
