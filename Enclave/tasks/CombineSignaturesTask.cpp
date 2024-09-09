@@ -76,11 +76,15 @@ std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_
 
 std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const BN &local_private_key, const std::string &encrypted_aes_key_base64, const std::string &encrypted_seed_base64, const std::string &remote_pubkey_hex) {
     // Decode base64 inputs
-    std::vector<uint8_t> encrypted_aes_key = safeheron::encode::base64::DecodeFromBase64(encrypted_aes_key_base64);
-    std::vector<uint8_t> encrypted_seed = safeheron::encode::base64::DecodeFromBase64(encrypted_seed_base64);
+    std::string encrypted_aes_key_str = safeheron::encode::base64::DecodeFromBase64(encrypted_aes_key_base64);
+    std::vector<uint8_t> encrypted_aes_key(encrypted_aes_key_str.begin(), encrypted_aes_key_str.end());
+
+    std::string encrypted_seed_str = safeheron::encode::base64::DecodeFromBase64(encrypted_seed_base64);
+    std::vector<uint8_t> encrypted_seed(encrypted_seed_str.begin(), encrypted_seed_str.end());
 
     // Decode hex public key
-    std::vector<uint8_t> remote_pubkey_bytes = safeheron::encode::hex::DecodeFromHex(remote_pubkey_hex);
+    std::string remote_pubkey_str = safeheron::encode::hex::DecodeFromHex(remote_pubkey_hex);
+    std::vector<uint8_t> remote_pubkey_bytes(remote_pubkey_str.begin(), remote_pubkey_str.end());
 
     // Ensure the length is either 33 (compressed) or 65 (uncompressed)
     if (remote_pubkey_bytes.size() != 33 && remote_pubkey_bytes.size() != 65) {
@@ -91,7 +95,9 @@ std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const BN &local_priv
     BN shared_secret = compute_shared_secret(local_private_key, remote_pubkey_bytes);
 
     // Decrypt the AES key using the shared secret
-    std::vector<uint8_t> shared_secret_bytes = shared_secret.ToBytesBE();
+    std::string shared_secret_str;
+    shared_secret.ToBytesBE(shared_secret_str);
+    std::vector<uint8_t> shared_secret_bytes(shared_secret_str.begin(), shared_secret_str.end());
     std::string decrypted_aes_key = decrypt_with_aes_key(shared_secret_bytes, encrypted_aes_key);
 
     // Decrypt the seed using the decrypted AES key
