@@ -167,6 +167,8 @@ int msg_handler::process(
         ret = QueryKeyShardState(req_id, req_body, resp_body);
     } else if (req_path == g_combine_sigs_path) {
         ret = CombineSignatures(req_id, req_body, resp_body);
+    } else if (req_path == g_root_seed_query_path) {
+        ret = QueryRootKey(req_id, req_body, resp_body);
     } else {
         ERROR("Request path is unknown! req_path: %s", req_path.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_REQ_PATH, "Request path is unknown!");
