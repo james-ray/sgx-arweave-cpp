@@ -147,7 +147,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     BN local_private_key;
     std::string private_key_hex = req_root["private_key_hex"].asString();
     local_private_key.FromHexStr(private_key_hex);
-    INFO_OUTPUT_CONSOLE("--->local_private_key: %s\n", private_key_hex);
+    INFO_OUTPUT_CONSOLE("--->local_private_key: %s\n", private_key_hex.c_str());
     // Parse public_key_list, encrypted_aes_key_list, and encrypted_seed_list
     STR_ARRAY public_key_list = req_root["public_key_list"].asStringArrary();
     STR_ARRAY encrypted_aes_key_list = req_root["encrypted_aes_key_list"].asStringArrary();
