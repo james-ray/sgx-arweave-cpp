@@ -240,7 +240,7 @@ int CombineSignaturesTask::get_reply_string(const std::string &request_id, const
     std::string sig_str;
     out_sig.ToHexStr(sig_str);
     reply_json["signature"] = sig_str;
-    reply_json["plain_seeds"] = sig_str;
+    reply_json["plain_seeds"] = plain_seeds;
     out_str = JSON::Root::write(reply_json);
     return 0;
 }

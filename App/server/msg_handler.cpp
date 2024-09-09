@@ -637,7 +637,13 @@ int msg_handler::CombineSignatures(
     // Parse the result JSON
     result_json = web::json::value::parse(result);
     if (result_json.has_field("plain_seeds")) {
-        // Process the result as needed
+        g_plain_seeds = result_json.at("plain_seeds").as_string();
+        result_json.erase("plain_seeds");
+    }else{
+        ERROR("Request ID: %s, plain_seeds not generated!", req_id.c_str());
+        resp_body = GetMessageReply(false, sgx_status, "ECALL raised an error!");
+        ret = sgx_status;
+        goto _exit;
     }
 
     // Convert the modified JSON back to a string
