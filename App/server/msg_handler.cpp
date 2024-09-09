@@ -567,7 +567,12 @@ int msg_handler::QueryRootKey(
     seedStream.str(g_plain_seeds);
     while (std::getline(seedStream, token, ',')) {
         plain_seeds.push_back(token);
+        INFO_OUTPUT_CONSOLE("token %s is added to plain_seeds", g_plain_seeds.c_str());
     }
+
+    // Debug log to print g_plain_seeds
+    INFO_OUTPUT_CONSOLE("g_plain_seeds: %s", g_plain_seeds.c_str());
+    INFO_OUTPUT_CONSOLE("index: %d", index));
 
     if (index >= plain_seeds.size()) {
         ERROR("Request ID: %s, index out of range in g_plain_seeds!", req_id.c_str());
