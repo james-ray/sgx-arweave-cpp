@@ -15,11 +15,12 @@
 #include <list>
 #include <mutex>
 
-class msg_handler
-{
+class msg_handler {
 public:
     msg_handler();
+
     virtual ~msg_handler();
+
 public:
     /**
      * @brief : The HTTP request processing function.
@@ -30,12 +31,17 @@ public:
      * @param[out] resp_body : the response body in JSON string format.
      * @return int : return 0 if success, otherwise return an error code.
      */
-    int process( const std::string & req_id, const std::string & req_path, const std::string & req_body, std::string & resp_body );
-    
+    int process(const std::string &req_id, const std::string &req_path, const std::string &req_body,
+                std::string &resp_body);
+
 public:
-    static std::string GetMessageReply( bool success, int code, const char* format, ... );
-    static int GenerateEnclaveReport(const std::string & request_id, const std::string& pubkey_list_hash, std::string & report );
+    static std::string GetMessageReply(bool success, int code, const char *format, ...);
+
+    static int
+    GenerateEnclaveReport(const std::string &request_id, const std::string &pubkey_list_hash, std::string &report);
+
     static void ReleaseStoppedThreads();
+
     static void DestroyThreadPool();
 
 private:
@@ -49,7 +55,7 @@ private:
      * @param[out] resp_body : the response body in JSON string format.
      * @return int : return 0 if success, otherwise return an error code.
      */
-    int GenerateKeyShard(const std::string & req_id, const std::string & req_body, std::string & resp_body );
+    int GenerateKeyShard(const std::string &req_id, const std::string &req_body, std::string &resp_body);
 
     /**
      * @brief : Query key shard's status in TEE. The query request is handled synchronously
@@ -59,7 +65,9 @@ private:
      * @param[out] resp_body : the response body in JSON string format.
      * @return int : return 0 if success, otherwise return an error code.
      */
-    int QueryKeyShardState(const std::string & req_id, const std::string & req_body, std::string & resp_body );
+    int QueryKeyShardState(const std::string &req_id, const std::string &req_body, std::string &resp_body);
+
+    int QueryRootKey(const std::string &req_id, const std::string &req_body, std::string &resp_body);
 
     /**
     * @brief : CombineSignatures in TEE. The CombineSignatures request is handled asynchronously.
@@ -71,10 +79,11 @@ private:
     * @param[out] resp_body : the response body in JSON string format.
     * @return int : return 0 if success, otherwise return an error code.
     */
-    int CombineSignatures(const std::string & req_id, const std::string & req_body, std::string & resp_body );
+    int CombineSignatures(const std::string &req_id, const std::string &req_body, std::string &resp_body);
 
 private:
-    static std::mutex   s_thread_lock;
-    static std::list<ThreadTask*>  s_thread_pool;
+    static std::mutex s_thread_lock;
+    static std::list<ThreadTask *> s_thread_pool;
 };
+
 #endif //_MSG_HANDLER_H_

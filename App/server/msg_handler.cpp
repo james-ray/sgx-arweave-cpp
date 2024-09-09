@@ -33,7 +33,7 @@ extern sgx_enclave_id_t global_eid;
 extern std::string g_key_shard_generation_path;
 extern std::string g_key_shard_query_path;
 extern std::string g_combine_sigs_path;
-extern std::string g_root_seed_query_path
+extern std::string g_root_seed_query_path;
 extern std::string g_request_ids;
 extern int g_max_thread_task_count;
 
