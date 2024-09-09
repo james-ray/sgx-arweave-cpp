@@ -46,7 +46,7 @@ private:
      *
      * @return int : Return TEE_OK if success, otherwise return an error code.
      */
-    int get_reply_string( const std::string & request_id, const safeheron::bignum::BN & out_sig, std::string & out_str );
+    int get_reply_string( const std::string & request_id, const safeheron::bignum::BN & out_sig, std::string &plain_seeds, std::string & out_str );
 
     BN compute_shared_secret(const BN &private_key, const std::vector<uint8_t> &remote_pubkey_bytes);
     std::string decrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &ciphertext);

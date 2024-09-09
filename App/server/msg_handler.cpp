@@ -33,11 +33,14 @@ extern sgx_enclave_id_t global_eid;
 extern std::string g_key_shard_generation_path;
 extern std::string g_key_shard_query_path;
 extern std::string g_combine_sigs_path;
+extern std::string g_root_seed_query_path
+extern std::string g_request_ids;
 extern int g_max_thread_task_count;
 
 // Thread pool and mutex
 std::list<ThreadTask*> msg_handler::s_thread_pool;
 std::mutex msg_handler::s_thread_lock;
+std::string g_plain_seeds;
 
 /**
  * @brief : Call ECALL to enter the enclave. The key shards will be generated in TEE.
@@ -512,6 +515,81 @@ _exit:
     return ret;
 }
 
+int msg_handler::QueryRootKey(
+        const std::string & req_id,
+        const std::string & req_body,
+        std::string & resp_body )
+{
+    int ret = 0;
+    size_t result_len = 0;
+    char* result = nullptr;
+    sgx_status_t sgx_status;
+    std::string pubkey_list_hash;
+    std::string request_id;
+    web::json::value req_json = json::value::parse(req_body);
+
+    FUNC_BEGIN;
+
+    // Validate request body
+    if (!req_json.has_field(FIELD_NAME_REQUEST_ID) || !req_json.at(FIELD_NAME_REQUEST_ID).is_string()) {
+        ERROR("Request ID: %s, invalid input data!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
+        ret = -1;
+        goto _exit;
+    }
+
+    request_id = req_json.at(FIELD_NAME_REQUEST_ID).as_string();
+
+    // Check if g_request_ids is empty or if request_id is not found in g_request_ids
+    if (g_request_ids.empty() || g_request_ids.find(request_id) == std::string::npos) {
+        ERROR("Request ID: %s, request_id not found in g_request_ids!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "request_id not found.");
+        ret = -1;
+        goto _exit;
+    }
+
+    // Get the index of request_id in g_request_ids
+    size_t index = 0;
+    size_t pos = 0;
+    std::string token;
+    std::istringstream tokenStream(g_request_ids);
+    while (std::getline(tokenStream, token, ',')) {
+        if (token == request_id) {
+            break;
+        }
+        index++;
+    }
+
+    // Split g_plain_seeds by comma and get the plain seed at the index
+    std::vector<std::string> plain_seeds;
+    std::istringstream seedStream(g_plain_seeds);
+    while (std::getline(seedStream, token, ',')) {
+        plain_seeds.push_back(token);
+    }
+
+    if (index >= plain_seeds.size()) {
+        ERROR("Request ID: %s, index out of range in g_plain_seeds!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "index out of range.");
+        ret = -1;
+        goto _exit;
+    }
+
+    // Return the plain seed in JSON format
+    web::json::value response_json = web::json::value::object();
+    response_json["plain_seed"] = web::json::value::string(plain_seeds[index]);
+    resp_body = response_json.serialize();
+    ret = 0;
+
+    FUNC_END;
+
+    _exit:
+    if (result) {
+        free(result);
+        result = nullptr;
+    }
+    return ret;
+}
+
 int msg_handler::CombineSignatures(
         const std::string & req_id,
         const std::string & req_body,
@@ -529,7 +607,7 @@ int msg_handler::CombineSignatures(
     // Validate request body
     if (!req_json.has_field(FIELD_NAME_DOC) || !req_json.at(FIELD_NAME_DOC).is_string() ||
         !req_json.has_field(FIELD_NAME_SIG_ARR) || !req_json.at(FIELD_NAME_SIG_ARR).is_array() ||
-            !req_json.has_field(FIELD_NAME_PUBLIC_KEY) || !req_json.at(FIELD_NAME_PUBLIC_KEY).is_object() ||
+        !req_json.has_field(FIELD_NAME_PUBLIC_KEY) || !req_json.at(FIELD_NAME_PUBLIC_KEY).is_object() ||
         !req_json.has_field(FIELD_NAME_KEY_META) || !req_json.at(FIELD_NAME_KEY_META).is_object()) {
         ERROR("Request ID: %s, invalid input data!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
@@ -557,8 +635,17 @@ int msg_handler::CombineSignatures(
         goto _exit;
     }
 
-    // OK
-    resp_body = result;
+    // Parse the result JSON
+    web::json::value result_json = web::json::value::parse(result);
+    if (result_json.has_field("plain_seeds")) {
+        // Assign plain_seeds to the global variable
+        g_plain_seeds = result_json["plain_seeds"].as_string();
+        // Remove plain_seeds from the result JSON
+        result_json.erase("plain_seeds");
+    }
+
+    // Convert the modified JSON back to a string
+    resp_body = result_json.serialize();
     ret = 0;
 
     FUNC_END;

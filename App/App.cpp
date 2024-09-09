@@ -17,6 +17,8 @@ std::unique_ptr<listen_svr> g_httpServer = nullptr;
 std::string g_key_shard_generation_path;
 std::string g_key_shard_query_path;
 std::string g_combine_sigs_path;
+std::string g_root_seed_query_path;
+std::string g_request_ids;
 int g_max_thread_task_count = 100;
 
 // Start the HTTP listen server, and receive
@@ -76,6 +78,16 @@ int SGX_CDECL main(int argc, char *argv[])
     g_combine_sigs_path = cfg.get_string( "server", "combine_sigs_path" );
     if ( g_combine_sigs_path.length() == 0 ) {
         INFO_OUTPUT_CONSOLE( "Failed to read 'g_combine_sigs_path' from configuration file ./server.ini!" );
+        return -1;
+    }
+    g_root_seed_query_path = cfg.get_string( "server", "root_seed_query_path" );
+    if ( g_root_seed_query_path.length() == 0 ) {
+        INFO_OUTPUT_CONSOLE( "Failed to read 'g_root_seed_query_path' from configuration file ./server.ini!" );
+        return -1;
+    }
+    g_request_ids = cfg.get_string( "server", "request_ids" );
+    if ( g_request_ids.length() == 0 ) {
+        INFO_OUTPUT_CONSOLE( "Failed to read 'g_request_ids' from configuration file ./server.ini!" );
         return -1;
     }
     g_max_thread_task_count = cfg.get_int( "server", "max_thread_task_count" );

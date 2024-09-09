@@ -23,24 +23,35 @@
 #define FIELD_NAME_KEY_LENGTH            "key_length"
 #define FIELD_NAME_WEBHOOK_URL           "webhook_url"
 #define FIELD_NAME_PUBKEY_LIST_HASH      "pubkey_list_hash"
+#define FIELD_NAME_REQUEST_ID            "request_id"
 
-typedef std::vector<std::string> PUBKEY_LIST;
+typedef std::vector <std::string> PUBKEY_LIST;
 
-class KeyShardParam
-{
+class KeyShardParam {
 public:
     KeyShardParam();
-    KeyShardParam(const std::string & json_str );
-    KeyShardParam(PUBKEY_LIST& pubkey_list, int k, int l, int key_length, const std::string & callback );
+
+    KeyShardParam(const std::string &json_str);
+
+    KeyShardParam(PUBKEY_LIST &pubkey_list, int k, int l, int key_length, const std::string &callback);
+
     virtual ~KeyShardParam();
+
 public:
     bool check_pubkey_list();
+
     bool check_k();
+
     bool check_l();
+
     bool check_key_length();
+
     bool check_webhook_url();
+
     std::string calc_pubkey_list_hash();
+
     std::string to_json_string();
+
 public:
     PUBKEY_LIST pubkey_list_;   // User public key list, which collects the ECDSA public key of each user
     int k_;   // Threshold numerator

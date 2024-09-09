@@ -30,7 +30,7 @@ extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext *> g_keyContext_list;
 
 
-BN CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std::vector<uint8_t> &remote_pubkey_bytes) {
+BN CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std::vector <uint8_t> &remote_pubkey_bytes) {
     // Initialize the curve
     const Curve *curve = safeheron::curve::GetCurveParam(CurveType::P256);
 
@@ -54,7 +54,7 @@ BN CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std
     return shared_secret;
 }
 
-std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &ciphertext) {
+std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector <uint8_t> &key, const std::vector <uint8_t> &ciphertext) {
     // Initialize AES-256-CBC decryption
     safeheron::ecies::AES aes(256);
     std::string key_str(key.begin(), key.end());
@@ -74,17 +74,20 @@ std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_
     return plaintext;
 }
 
-std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const BN &local_private_key, const std::string &encrypted_aes_key_base64, const std::string &encrypted_seed_base64, const std::string &remote_pubkey_hex) {
+std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const BN &local_private_key,
+                                                            const std::string &encrypted_aes_key_base64,
+                                                            const std::string &encrypted_seed_base64,
+                                                            const std::string &remote_pubkey_hex) {
     // Decode base64 inputs
     std::string encrypted_aes_key_str = safeheron::encode::base64::DecodeFromBase64(encrypted_aes_key_base64);
-    std::vector<uint8_t> encrypted_aes_key(encrypted_aes_key_str.begin(), encrypted_aes_key_str.end());
+    std::vector <uint8_t> encrypted_aes_key(encrypted_aes_key_str.begin(), encrypted_aes_key_str.end());
 
     std::string encrypted_seed_str = safeheron::encode::base64::DecodeFromBase64(encrypted_seed_base64);
-    std::vector<uint8_t> encrypted_seed(encrypted_seed_str.begin(), encrypted_seed_str.end());
+    std::vector <uint8_t> encrypted_seed(encrypted_seed_str.begin(), encrypted_seed_str.end());
 
     // Decode hex public key
     std::string remote_pubkey_str = safeheron::encode::hex::DecodeFromHex(remote_pubkey_hex);
-    std::vector<uint8_t> remote_pubkey_bytes(remote_pubkey_str.begin(), remote_pubkey_str.end());
+    std::vector <uint8_t> remote_pubkey_bytes(remote_pubkey_str.begin(), remote_pubkey_str.end());
 
     // Ensure the length is either 33 (compressed) or 65 (uncompressed)
     if (remote_pubkey_bytes.size() != 33 && remote_pubkey_bytes.size() != 65) {
@@ -97,11 +100,11 @@ std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const BN &local_priv
     // Decrypt the AES key using the shared secret
     std::string shared_secret_str;
     shared_secret.ToBytesBE(shared_secret_str);
-    std::vector<uint8_t> shared_secret_bytes(shared_secret_str.begin(), shared_secret_str.end());
+    std::vector <uint8_t> shared_secret_bytes(shared_secret_str.begin(), shared_secret_str.end());
     std::string decrypted_aes_key = decrypt_with_aes_key(shared_secret_bytes, encrypted_aes_key);
 
     // Decrypt the seed using the decrypted AES key
-    std::vector<uint8_t> decrypted_aes_key_bytes(decrypted_aes_key.begin(), decrypted_aes_key.end());
+    std::vector <uint8_t> decrypted_aes_key_bytes(decrypted_aes_key.begin(), decrypted_aes_key.end());
     std::string plaintext_seed = decrypt_with_aes_key(decrypted_aes_key_bytes, encrypted_seed);
 
     return plaintext_seed;
@@ -141,9 +144,49 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     INFO_OUTPUT_CONSOLE("--->DOC_PSS: %s\n", doc_pss.c_str());
 
     // Parse sig_shares
-    std::vector<RSASigShare> sig_shares;
+    std::vector <RSASigShare> sig_shares;
     STR_ARRAY sig_shares_str_arr = req_root["sig_shares"].asStringArrary();
-    for (const std::string &sig_share_str : sig_shares_str_arr) {
+    for (const std::string &sig_share_str: sig_shares_str_arr) {
+        RSASigShare sig_share;
+        sig_share.FromHexStr(sig_share_str);
+        sig_shares.push_back(sig_share);
+    }
+
+    // Parse public_key_list, encrypted_aes_key_list, and encrypted_seed_list
+    STR_ARRAY public_key_list = req_root["public_key_list"].asStringArrary();
+    STR_ARRAY encrypted_aes_key_list = req_root["encrypted_aes_key_list"].asStringArrary();
+    STR_ARRAY encrypted_seed_list = req_root["encrypted_seed_list"].asStringArrary();
+
+    // Load local private key from file
+    BN local_private_key;
+    std::ifstream private_key_file("ecdsa_private_key");
+    if (!private_key_file.is_open()) {
+        error_msg = format_msg("Request ID: %s, failed to open private key file!", request_id.c_str());
+        ERROR("%s", error_msg.c_str());
+        return TEE_ERROR_FILE_NOT_FOUND;
+    }
+    std::string private_key_str((std::istreambuf_iterator<char>(private_key_file)), std::istreambuf_iterator<char>());
+    local_private_key.FromHexStr(private_key_str);
+
+    // Decrypt seeds
+    std::vector <std::string> plain_seeds;
+    for (size_t i = 0; i < public_key_list.size(); ++i) {
+        std::string plain_seed = perform_ecdh_and_decrypt(local_private_key, encrypted_aes_key_list[i],
+                                                          encrypted_seed_list[i], public_key_list[i]);
+        plain_seeds.push_back(plain_seed);
+    }
+    // Concatenate plain seeds with commas
+    std::string concatenated_plain_seeds;
+    for (size_t i = 0; i < plain_seeds.size(); ++i) {
+        concatenated_plain_seeds += plain_seeds[i];
+        if (i < plain_seeds.size() - 1) {
+            concatenated_plain_seeds += ",";
+        }
+    }
+    // Parse sig_shares
+    std::vector <RSASigShare> sig_shares;
+    STR_ARRAY sig_shares_str_arr = req_root["sig_shares"].asStringArrary();
+    for (const std::string &sig_share_str: sig_shares_str_arr) {
         INFO_OUTPUT_CONSOLE("--->try parsing sig_share_str: %s \n", sig_share_str.c_str());
         JSON::Root sig_share_json = JSON::Root::parse(sig_share_str);
         if (sig_share_json.is_valid()) {
@@ -153,7 +196,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
             sig_share.set_z(safeheron::bignum::BN(sig_share_json["z"].asString().c_str(), 16));
             sig_share.set_c(safeheron::bignum::BN(sig_share_json["c"].asString().c_str(), 16));
             sig_shares.push_back(sig_share);
-        }else{
+        } else {
             INFO_OUTPUT_CONSOLE("--->sig_share_json is invalid: %s \n", sig_share_str.c_str());
             error_msg = format_msg("Request ID: %s, sig_share_json is not valid! sig_share_str: %s",
                                    request_id.c_str(), sig_share_str.c_str());
@@ -164,7 +207,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     INFO_OUTPUT_CONSOLE("--->after parse sig_shares: %zu\n", sig_shares.size());
 
     // Parse public_key
-    JSON::Root public_key_json = req_root["public_key"].asJson();
+    JSON::Root public_key_json = req_root["rsa_public_key"].asJson();
     public_key.set_e(safeheron::bignum::BN(public_key_json["e"].asString().c_str(), 16));
     public_key.set_n(safeheron::bignum::BN(public_key_json["n"].asString().c_str(), 16));
     std::string public_key_n_str;
@@ -175,9 +218,9 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     JSON::Root key_meta_json = req_root["key_meta"].asJson();
     key_meta.set_k(key_meta_json["k"].asInt());
     key_meta.set_l(key_meta_json["l"].asInt());
-    std::vector<safeheron::bignum::BN> vki_arr;
+    std::vector <safeheron::bignum::BN> vki_arr;
     STR_ARRAY vki_str_arr = key_meta_json["vkiArr"].asStringArrary();
-    for (const std::string &vki_str : vki_str_arr) {
+    for (const std::string &vki_str: vki_str_arr) {
         vki_arr.push_back(safeheron::bignum::BN(vki_str.c_str(), 16));
     }
     key_meta.set_vki_arr(vki_arr);
@@ -190,7 +233,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     // Convert hex string to binary representation
     std::string em_binary = safeheron::encode::hex::DecodeFromHex(doc_pss.c_str());
 
-    if (!safeheron::tss_rsa::VerifyEMSA_PSS(doc, 1024, safeheron::tss_rsa::SaltLength::AutoLength, em_binary) ) {
+    if (!safeheron::tss_rsa::VerifyEMSA_PSS(doc, 1024, safeheron::tss_rsa::SaltLength::AutoLength, em_binary)) {
         error_msg = format_msg("Request ID: %s, VerifyEMSA_PSS failed!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
@@ -202,16 +245,17 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
     }
 
-    return get_reply_string(request_id, out_sig, reply);
+    return get_reply_string(request_id, out_sig, concatenated_plain_seeds, reply);
 }
 
 int CombineSignaturesTask::get_reply_string(const std::string &request_id, const safeheron::bignum::BN &out_sig,
-                                            std::string &out_str) {
+                                            std::string &plain_seeds, std::string &out_str) {
     JSON::Root reply_json;
     reply_json["success"] = true;
     std::string sig_str;
     out_sig.ToHexStr(sig_str);
     reply_json["signature"] = sig_str;
+    reply_json["plain_seeds"] = sig_str
     out_str = JSON::Root::write(reply_json);
     return 0;
 }
