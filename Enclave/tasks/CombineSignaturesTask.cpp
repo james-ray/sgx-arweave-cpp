@@ -143,16 +143,17 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     doc_pss = req_root["doc_pss"].asString();
     INFO_OUTPUT_CONSOLE("--->DOC_PSS: %s\n", doc_pss.c_str());
 
+    // Load local private key from request JSON field
+    BN local_private_key;
+    std::string private_key_hex = req_root["private_key_hex"].asString();
+    local_private_key.FromHexStr(private_key_hex);
+    INFO_OUTPUT_CONSOLE("--->local_private_key: %s\n", private_key_hex);
     // Parse public_key_list, encrypted_aes_key_list, and encrypted_seed_list
     STR_ARRAY public_key_list = req_root["public_key_list"].asStringArrary();
     STR_ARRAY encrypted_aes_key_list = req_root["encrypted_aes_key_list"].asStringArrary();
     STR_ARRAY encrypted_seed_list = req_root["encrypted_seed_list"].asStringArrary();
 
-    // Load local private key from request JSON field
-    BN local_private_key;
-    std::string private_key_hex = req_root["private_key_hex"].asString();
-    local_private_key.FromHexStr(private_key_hex);
-
+    INFO_OUTPUT_CONSOLE("--->public_key_list size: %ld\n", public_key_list.size());
     // Decrypt seeds
     std::vector <std::string> plain_seeds;
     for (size_t i = 0; i < public_key_list.size(); ++i) {
