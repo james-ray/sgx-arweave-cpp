@@ -23,7 +23,6 @@
 using safeheron::curve::Curve;
 using safeheron::curve::CurvePoint;
 using safeheron::curve::CurveType;
-using safeheron::ecies::ECIES;
 using safeheron::bignum::BN;
 
 
