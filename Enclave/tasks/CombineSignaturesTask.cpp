@@ -150,11 +150,6 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 
     // Load local private key from request JSON field
     BN local_private_key;
-    if (!req_root.has_field("private_key_hex") || !req_root["private_key_hex"].is_string()) {
-        error_msg = format_msg("Request ID: %s, private_key_hex field is missing or not a string!", request_id.c_str());
-        ERROR("%s", error_msg.c_str());
-        return TEE_ERROR_INVALID_PARAMETER;
-    }
     std::string private_key_hex = req_root["private_key_hex"].asString();
     local_private_key.FromHexStr(private_key_hex);
 
