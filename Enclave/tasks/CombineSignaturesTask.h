@@ -50,5 +50,5 @@ private:
 
     BN compute_shared_secret(const BN &private_key, const std::vector<uint8_t> &remote_pubkey_bytes);
     std::string decrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &ciphertext);
-    std::string perform_ecdh_and_decrypt(const safeheron::bignum::BN &local_private_key, const std::string &encrypted_aes_key_base64, const std::string &encrypted_seed_base64, const std::string &remote_pubkey_hex;
+    std::string perform_ecdh_and_decrypt(const safeheron::bignum::BN &local_private_key, const std::string &encrypted_aes_key_base64, const std::string &encrypted_seed_base64, const std::string &remote_pubkey_hex);
 };
