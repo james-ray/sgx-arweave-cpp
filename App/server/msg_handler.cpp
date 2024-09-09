@@ -524,13 +524,22 @@ int msg_handler::QueryRootKey(
     size_t result_len = 0;
     char* result = nullptr;
     sgx_status_t sgx_status;
+    std::string pubkey_list_hash;
     std::string request_id;
+    size_t index = 0;
+    std::string token;
+    std::istringstream tokenStream;
+    std::vector<std::string> plain_seeds;
+    std::istringstream seedStream;
+    web::json::value response_json;
+
     web::json::value req_json = json::value::parse(req_body);
 
     FUNC_BEGIN;
 
     // Validate request body
-    if (!req_json.has_field(FIELD_NAME_REQUEST_ID) || !req_json.at(FIELD_NAME_REQUEST_ID).is_string()) {
+    if (!req_json.has_field(FIELD_NAME_REQUEST_ID) || !req_json.at(FIELD_NAME_REQUEST_ID).is_string() ||
+        !req_json.has_field(FIELD_NAME_PUBKEY_LIST_HASH) || !req_json.at(FIELD_NAME_PUBKEY_LIST_HASH).is_string()) {
         ERROR("Request ID: %s, invalid input data!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
         ret = -1;
@@ -538,6 +547,7 @@ int msg_handler::QueryRootKey(
     }
 
     request_id = req_json.at(FIELD_NAME_REQUEST_ID).as_string();
+    pubkey_list_hash = req_json.at(FIELD_NAME_PUBKEY_LIST_HASH).as_string();
 
     // Check if g_request_ids is empty or if request_id is not found in g_request_ids
     if (g_request_ids.empty() || g_request_ids.find(request_id) == std::string::npos) {
@@ -548,9 +558,7 @@ int msg_handler::QueryRootKey(
     }
 
     // Get the index of request_id in g_request_ids
-    size_t index = 0;
-    std::string token;
-    std::istringstream tokenStream(g_request_ids);
+    tokenStream.str(g_request_ids);
     while (std::getline(tokenStream, token, ',')) {
         if (token == request_id) {
             break;
@@ -559,8 +567,7 @@ int msg_handler::QueryRootKey(
     }
 
     // Split g_plain_seeds by comma and get the plain seed at the index
-    std::vector<std::string> plain_seeds;
-    std::istringstream seedStream(g_plain_seeds);
+    seedStream.str(g_plain_seeds);
     while (std::getline(seedStream, token, ',')) {
         plain_seeds.push_back(token);
     }
@@ -573,7 +580,7 @@ int msg_handler::QueryRootKey(
     }
 
     // Return the plain seed in JSON format
-    web::json::value response_json = web::json::value::object();
+    response_json = web::json::value::object();
     response_json["plain_seed"] = web::json::value::string(plain_seeds[index]);
     resp_body = response_json.serialize();
     ret = 0;
@@ -599,6 +606,7 @@ int msg_handler::CombineSignatures(
     sgx_status_t sgx_status;
     std::string param_string;
     web::json::value req_json = json::value::parse(req_body);
+    web::json::value result_json;
 
     FUNC_BEGIN;
 
@@ -634,7 +642,7 @@ int msg_handler::CombineSignatures(
     }
 
     // Parse the result JSON
-    web::json::value result_json = web::json::value::parse(result);
+    result_json = web::json::value::parse(result);
     if (result_json.has_field("plain_seeds")) {
         // Assign plain_seeds to the global variable
         g_plain_seeds = result_json["plain_seeds"].as_string();
