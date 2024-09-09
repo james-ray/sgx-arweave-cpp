@@ -30,9 +30,9 @@ extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext *> g_keyContext_list;
 
 
-BN CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std::vector<uint8_t> &remote_pubkey_bytes, CurveType curve_type) {
+BN CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std::vector<uint8_t> &remote_pubkey_bytes) {
     // Initialize the curve
-    const Curve *curve = safeheron::curve::GetCurveParam(curve_type);
+    const Curve *curve = safeheron::curve::GetCurveParam(safeheron::curve::CurveType::P256);
 
     // Decode the remote public key
     CurvePoint remote_public_key;
