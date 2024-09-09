@@ -9,6 +9,8 @@ set(CMAKE_C_COMPILER "/usr/bin/gcc")
 set(CMAKE_CXX_COMPILER "/usr/bin/g++")
 
 set(SGX_SDK "/opt/intel/sgxsdk")
+set(SGX_SSL_PATH "/opt/intel/sgxssl")
+set(SGX_SSL_INCLUDE_DIR "${SGX_SSL_PATH}/include")
 set(SGX_ARCH x64)
 set(SGX_MODE HW CACHE STRING "SGX mode: SIM or HW")
 set(SGX_BUILD RELEASE CACHE STRING "Build: DEBUG, PRERELEASE or RELEASE")
@@ -23,6 +25,12 @@ set(SGX_OPENSSL_LIBRARY_DIR ${SGX_OPENSSL_ROOT}/lib64)
 set(SGX_OPENSSL_LIBRARY_FILE_TSSL ${SGX_OPENSSL_ROOT}/lib64/libsgx_tsgxssl.a)
 set(SGX_OPENSSL_LIBRARY_FILE_USSL ${SGX_OPENSSL_ROOT}/lib64/libsgx_usgxssl.a)
 set(SGX_OPENSSL_LIBRARY_FILE_TCRYPTO ${SGX_OPENSSL_ROOT}/lib64/libsgx_tsgxssl_crypto.a)
+
+# Add OpenSSL include directory
+include_directories(${SGX_OPENSSL_INCLUDE_DIR})
+
+# Add OpenSSL library directory
+link_directories(${SGX_OPENSSL_LIBRARY_DIR})
 
 option(DEBUG "option for debug" OFF)
 if (DEBUG)

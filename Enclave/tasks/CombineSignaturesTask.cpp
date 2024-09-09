@@ -7,7 +7,7 @@
 #include <vector>
 #include <string>
 #include <crypto-curve/curve.h>
-#include <crypto-ecies/ecies.h>
+#include <crypto-ecies/symm.h>
 #include <crypto-encode/base64.h>
 #include "crypto-encode/hex.h"
 #include <crypto-bn/bn.h>
@@ -29,13 +29,24 @@ using safeheron::bignum::BN;
 
 extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext *> g_keyContext_list;
-/*
 std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &ciphertext) {
-    // Implement AES-GCM decryption
-    GCM gcm;
-    std::vector<uint8_t> plaintext;
-    gcm.Decrypt(key, ciphertext, plaintext);
-    return std::string(plaintext.begin(), plaintext.end());
+    // Initialize AES-256-CBC decryption
+    safeheron::ecies::AES aes(256);
+    std::string key_str(key.begin(), key.end());
+    std::string iv(16, 0); // Assuming a zero IV for simplicity, replace with actual IV if available
+
+    if (!aes.initKey_CBC(key_str, iv)) {
+        throw std::runtime_error("Failed to initialize AES key and IV");
+    }
+
+    std::string ciphertext_str(ciphertext.begin(), ciphertext.end());
+    std::string plaintext;
+
+    if (!aes.decrypt(ciphertext_str, plaintext)) {
+        throw std::runtime_error("AES decryption failed");
+    }
+
+    return plaintext;
 }
 
 std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const std::string &encrypted_aes_key_base64, const std::string &encrypted_seed_base64, const std::string &remote_pubkey_hex) {
@@ -69,7 +80,7 @@ std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const std::string &e
     std::string plaintext_seed = decrypt_with_aes_key(decrypted_aes_key_bytes, encrypted_seed);
 
     return plaintext_seed;
-}*/
+}
 
 int CombineSignaturesTask::get_task_type() {
     return eTaskType_CombineSignatures;
