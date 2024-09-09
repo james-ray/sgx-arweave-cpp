@@ -524,7 +524,6 @@ int msg_handler::QueryRootKey(
     size_t result_len = 0;
     char* result = nullptr;
     sgx_status_t sgx_status;
-    std::string pubkey_list_hash;
     std::string request_id;
     web::json::value req_json = json::value::parse(req_body);
 
@@ -535,7 +534,7 @@ int msg_handler::QueryRootKey(
         ERROR("Request ID: %s, invalid input data!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
         ret = -1;
-        goto _exit;
+        goto _exit1;
     }
 
     request_id = req_json.at(FIELD_NAME_REQUEST_ID).as_string();
@@ -545,12 +544,11 @@ int msg_handler::QueryRootKey(
         ERROR("Request ID: %s, request_id not found in g_request_ids!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "request_id not found.");
         ret = -1;
-        goto _exit;
+        goto _exit1;
     }
 
     // Get the index of request_id in g_request_ids
     size_t index = 0;
-    size_t pos = 0;
     std::string token;
     std::istringstream tokenStream(g_request_ids);
     while (std::getline(tokenStream, token, ',')) {
@@ -571,7 +569,7 @@ int msg_handler::QueryRootKey(
         ERROR("Request ID: %s, index out of range in g_plain_seeds!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "index out of range.");
         ret = -1;
-        goto _exit;
+        goto _exit1;
     }
 
     // Return the plain seed in JSON format
@@ -582,7 +580,7 @@ int msg_handler::QueryRootKey(
 
     FUNC_END;
 
-    _exit:
+    _exit1:
     if (result) {
         free(result);
         result = nullptr;
