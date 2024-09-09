@@ -6,11 +6,12 @@
 #include "json/json.h"
 #include <vector>
 #include <string>
-#include <crypto-curve/curve.h>
+#include "crypto-curve/curve_point.h"
+#include "crypto-bn/bn.h"
+#include "crypto-curve/curve.h"
 #include <crypto-ecies/symm.h>
 #include <crypto-encode/base64.h>
 #include "crypto-encode/hex.h"
-#include <crypto-bn/bn.h>
 #include <stdlib.h>
 #include <unistd.h>
 #include <cstring>
@@ -28,6 +29,32 @@ using safeheron::bignum::BN;
 
 extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext *> g_keyContext_list;
+
+
+BN CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std::vector<uint8_t> &remote_pubkey_bytes, CurveType curve_type) {
+    // Initialize the curve
+    const Curve *curve = safeheron::curve::GetCurveParam(curve_type);
+
+    // Decode the remote public key
+    CurvePoint remote_public_key;
+    if (remote_pubkey_bytes.size() == 33) {
+        remote_public_key.DecodeCompressed(remote_pubkey_bytes.data(), curve_type);
+    } else if (remote_pubkey_bytes.size() == 65) {
+        remote_public_key.DecodeFull(remote_pubkey_bytes.data(), curve_type);
+    } else {
+        throw std::runtime_error("Invalid remote_pubkey length");
+    }
+
+    // Compute the shared secret using ECC multiplication
+    CurvePoint shared_secret_point = remote_public_key;
+    shared_secret_point *= private_key;
+
+    // Convert the shared secret point to a BN
+    BN shared_secret = shared_secret_point.x();
+
+    return shared_secret;
+}
+
 std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &ciphertext) {
     // Initialize AES-256-CBC decryption
     safeheron::ecies::AES aes(256);
@@ -48,7 +75,7 @@ std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_
     return plaintext;
 }
 
-std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const std::string &encrypted_aes_key_base64, const std::string &encrypted_seed_base64, const std::string &remote_pubkey_hex) {
+std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const BN &local_private_key, const std::string &encrypted_aes_key_base64, const std::string &encrypted_seed_base64, const std::string &remote_pubkey_hex) {
     // Decode base64 inputs
     std::vector<uint8_t> encrypted_aes_key = safeheron::encode::base64::Decode(encrypted_aes_key_base64);
     std::vector<uint8_t> encrypted_seed = safeheron::encode::base64::Decode(encrypted_seed_base64);
@@ -61,14 +88,8 @@ std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const std::string &e
         throw std::runtime_error("Invalid remote_pubkey length");
     }
 
-    // Generate local ephemeral key pair
-    Curve curve(CurveType::SECP256K1);
-    BN local_private_key = curve.GeneratePrivateKey();
-    CurvePoint local_public_key = curve.GeneratePublicKey(local_private_key);
-
     // Compute shared secret
-    CurvePoint remote_public_key = curve.DecodePoint(remote_pubkey_bytes);
-    BN shared_secret = curve.ECDH(local_private_key, remote_public_key);
+    BN shared_secret = compute_shared_secret(local_private_key, remote_pubkey_bytes, CurveType::SECP256K1);
 
     // Decrypt the AES key using the shared secret
     std::vector<uint8_t> shared_secret_bytes = shared_secret.ToBytes();
