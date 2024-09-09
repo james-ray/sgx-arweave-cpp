@@ -522,7 +522,6 @@ int msg_handler::QueryRootKey(
     size_t result_len = 0;
     char *result = nullptr;
     sgx_status_t sgx_status;
-    std::string pubkey_list_hash;
     std::string request_id;
     size_t index = 0;
     std::string token;
@@ -536,8 +535,7 @@ int msg_handler::QueryRootKey(
     FUNC_BEGIN;
 
     // Validate request body
-    if (!req_json.has_field(FIELD_NAME_REQUEST_ID) || !req_json.at(FIELD_NAME_REQUEST_ID).is_string() ||
-        !req_json.has_field(FIELD_NAME_PUBKEY_LIST_HASH) || !req_json.at(FIELD_NAME_PUBKEY_LIST_HASH).is_string()) {
+    if (!req_json.has_field(FIELD_NAME_REQUEST_ID) || !req_json.at(FIELD_NAME_REQUEST_ID).is_string()) {
         ERROR("Request ID: %s, invalid input data!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
         ret = -1;
@@ -545,7 +543,6 @@ int msg_handler::QueryRootKey(
     }
 
     request_id = req_json.at(FIELD_NAME_REQUEST_ID).as_string();
-    pubkey_list_hash = req_json.at(FIELD_NAME_PUBKEY_LIST_HASH).as_string();
 
     // Check if g_request_ids is empty or if request_id is not found in g_request_ids
     if (g_request_ids.empty() || g_request_ids.find(request_id) == std::string::npos) {
