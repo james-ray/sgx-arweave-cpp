@@ -58,7 +58,8 @@ std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector <uint8
     // Initialize AES-256-CBC decryption
     safeheron::ecies::AES aes(256);
     std::string key_str(key.begin(), key.end());
-    std::string iv(16, 0); // Assuming a zero IV for simplicity, replace with actual IV if available
+    //std::string iv(16, 0); // Assuming a zero IV for simplicity, replace with actual IV if available
+    std::string iv = "helloworld!@#"; // Set IV to "helloworld!@#"
 
     if (!aes.initKey_CBC(key_str, iv)) {
         throw std::runtime_error("Failed to initialize AES key and IV");
@@ -93,7 +94,7 @@ std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const BN &local_priv
     if (remote_pubkey_bytes.size() != 33 && remote_pubkey_bytes.size() != 65) {
         throw std::runtime_error("Invalid remote_pubkey length");
     }
-
+    INFO_OUTPUT_CONSOLE("--->remote_pubkey_bytes size: %ld\n", remote_pubkey_bytes.size());
     // Compute shared secret
     BN shared_secret = compute_shared_secret(local_private_key, remote_pubkey_bytes);
 
