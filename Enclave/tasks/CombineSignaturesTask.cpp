@@ -18,7 +18,6 @@
 #include <mutex>
 #include <map>
 #include <sstream>
-#include <fstream>
 
 #include "Enclave_t.h"
 
@@ -149,16 +148,15 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     STR_ARRAY encrypted_aes_key_list = req_root["encrypted_aes_key_list"].asStringArrary();
     STR_ARRAY encrypted_seed_list = req_root["encrypted_seed_list"].asStringArrary();
 
-    // Load local private key from file
+    // Load local private key from request JSON field
     BN local_private_key;
-    std::ifstream private_key_file("ecdsa_private_key");
-    if (!private_key_file.is_open()) {
-        error_msg = format_msg("Request ID: %s, failed to open private key file!", request_id.c_str());
+    if (!req_root.has_field("private_key_hex") || !req_root["private_key_hex"].is_string()) {
+        error_msg = format_msg("Request ID: %s, private_key_hex field is missing or not a string!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
-        return TEE_ERROR_INTERNAL_ERROR;
+        return TEE_ERROR_INVALID_PARAMETER;
     }
-    std::string private_key_str((std::istreambuf_iterator<char>(private_key_file)), std::istreambuf_iterator<char>());
-    local_private_key.FromHexStr(private_key_str);
+    std::string private_key_hex = req_root["private_key_hex"].asString();
+    local_private_key.FromHexStr(private_key_hex);
 
     // Decrypt seeds
     std::vector <std::string> plain_seeds;

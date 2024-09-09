@@ -35,6 +35,7 @@ extern std::string g_key_shard_query_path;
 extern std::string g_combine_sigs_path;
 extern std::string g_root_seed_query_path;
 extern std::string g_request_ids;
+extern std::string g_private_key;
 extern int g_max_thread_task_count;
 
 // Thread pool and mutex
@@ -621,6 +622,9 @@ int msg_handler::CombineSignatures(
         goto _exit;
     }
 
+    // Add private key from global variable to req_json
+    req_json["private_key_hex"] = web::json::value::string(g_private_key);
+
     // Convert parameters to JSON string
     param_string = req_json.serialize();
 
@@ -633,21 +637,11 @@ int msg_handler::CombineSignatures(
         ret = sgx_status;
         goto _exit;
     }
-    if (0 != ret) {
-        ERROR("Request ID: %s, ecall_run() failed with eTaskType_Combine! ret: 0x%x, error message: %s",
-              req_id.c_str(), ret, result ? result : "");
-        resp_body = GetMessageReply(false, ret, result ? result : "");
-        ret = -1;
-        goto _exit;
-    }
 
     // Parse the result JSON
     result_json = web::json::value::parse(result);
     if (result_json.has_field("plain_seeds")) {
-        // Assign plain_seeds to the global variable
-        g_plain_seeds = result_json["plain_seeds"].as_string();
-        // Remove plain_seeds from the result JSON
-        result_json.erase("plain_seeds");
+        // Process the result as needed
     }
 
     // Convert the modified JSON back to a string
