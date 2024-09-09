@@ -18,6 +18,7 @@
 #include <mutex>
 #include <map>
 #include <sstream>
+#include <fstream>
 
 #include "Enclave_t.h"
 
