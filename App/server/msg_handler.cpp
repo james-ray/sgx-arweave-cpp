@@ -572,7 +572,7 @@ int msg_handler::QueryRootKey(
 
     // Debug log to print g_plain_seeds
     INFO_OUTPUT_CONSOLE("g_plain_seeds: %s", g_plain_seeds.c_str());
-    INFO_OUTPUT_CONSOLE("index: %d", index));
+    INFO_OUTPUT_CONSOLE("index: %ld", index);
 
     if (index >= plain_seeds.size()) {
         ERROR("Request ID: %s, index out of range in g_plain_seeds!", req_id.c_str());
