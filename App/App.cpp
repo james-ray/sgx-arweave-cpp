@@ -86,7 +86,7 @@ int SGX_CDECL main(int argc, char *argv[])
         INFO_OUTPUT_CONSOLE( "Failed to read 'g_root_seed_query_path' from configuration file ./server.ini!" );
         return -1;
     }
-    g_private_key_file_path = cfg.get_string( "server", "private_key" );
+    g_private_key = cfg.get_string( "server", "private_key" );
     if ( g_request_ids.length() == 0 ) {
         INFO_OUTPUT_CONSOLE( "Failed to read 'g_private_key' from configuration file ./server.ini!" );
         return -1;
