@@ -517,22 +517,7 @@ int msg_handler::QueryKeyShardState(
     return ret;
 }
 
-std::string get_public_key_for_request_id(const std::string &request_id) {
-    // Split g_request_ids by comma
-    std::istringstream request_ids_stream(g_request_ids);
-    std::string id;
-    std::vector<std::string> request_ids;
-    while (std::getline(request_ids_stream, id, ',')) {
-        request_ids.push_back(id);
-    }
-
-    // Find the index of request_id
-    auto it = std::find(request_ids.begin(), request_ids.end(), request_id);
-    if (it == request_ids.end()) {
-        throw std::runtime_error("request_id not found in g_request_ids");
-    }
-    size_t index = std::distance(request_ids.begin(), it);
-
+std::string get_public_key_for_index(size_t index) {
     // Split g_sign_node_public_keys by comma
     std::istringstream public_keys_stream(g_sign_node_public_keys);
     std::string pubkey;
@@ -541,11 +526,27 @@ std::string get_public_key_for_request_id(const std::string &request_id) {
         public_keys.push_back(pubkey);
     }
 
-    // Fetch the public key at the found index
+    // Fetch the public key at the given index
     if (index >= public_keys.size()) {
         throw std::runtime_error("Index out of bounds in g_sign_node_public_keys");
     }
     return public_keys[index];
+}
+
+std::string get_plain_text_for_index(size_t index) {
+    // Split g_plain_seeds by comma
+    std::istringstream plain_seeds_stream(g_plain_seeds);
+    std::string plain_text;
+    std::vector<std::string> plain_seeds;
+    while (std::getline(plain_seeds_stream, plain_text, ',')) {
+        plain_seeds.push_back(plain_text);
+    }
+
+    // Fetch the plain text at the given index
+    if (index >= plain_seeds.size()) {
+        throw std::runtime_error("Index out of bounds in g_plain_seeds");
+    }
+    return plain_seeds[index];
 }
 
 int msg_handler::QueryRootKey(
@@ -558,6 +559,7 @@ int msg_handler::QueryRootKey(
     sgx_status_t sgx_status;
     std::string request_id;
     std::string remote_public_key_hex;
+    std::string plain_text;
     std::string param_string;
     web::json::value req_json = web::json::value::parse(req_body);
     web::json::value response_json;
@@ -569,34 +571,58 @@ int msg_handler::QueryRootKey(
         ERROR("Request ID: %s, invalid input data!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
         ret = -1;
-        goto _exit;
+        goto _exit2;
     }
 
     request_id = req_json.at(FIELD_NAME_REQUEST_ID).as_string();
 
+    if (g_plain_seeds.empty()){
+        ERROR("Request ID: %s, g_plain_seeds is empty!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_plain_seeds is empty.");
+        ret = -1;
+        goto _exit2;
+    }
     // Check if g_request_ids is empty or if request_id is not found in g_request_ids
     if (g_request_ids.empty() || g_request_ids.find(request_id) == std::string::npos) {
         ERROR("Request ID: %s, request_id not found in g_request_ids!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "request_id not found.");
         ret = -1;
-        goto _exit;
+        goto _exit2;
     }
 
-    try {
-        // Fetch the corresponding public key for the request_id
-        remote_public_key_hex = get_public_key_for_request_id(request_id);
-    } catch (const std::exception &e) {
-        ERROR("Request ID: %s, Error fetching public key: %s", req_id.c_str(), e.what());
-        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "Error fetching public key.");
+    // Find the index of request_id
+    std::istringstream request_ids_stream(g_request_ids);
+    std::string id;
+    std::vector<std::string> request_ids;
+    while (std::getline(request_ids_stream, id, ',')) {
+        request_ids.push_back(id);
+    }
+
+    auto it = std::find(request_ids.begin(), request_ids.end(), request_id);
+    if (it == request_ids.end()) {
+        ERROR("Request ID: %s, request_id not found in g_request_ids!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "request_id not found.");
         ret = -1;
-        goto _exit;
+        goto _exit2;
+    }
+    size_t index = std::distance(request_ids.begin(), it);
+
+    try {
+        // Fetch the corresponding public key and plain text for the index
+        remote_public_key_hex = get_public_key_for_index(index);
+        plain_text = get_plain_text_for_index(index);
+    } catch (const std::exception &e) {
+        ERROR("Request ID: %s, Error fetching data: %s", req_id.c_str(), e.what());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "Error fetching data.");
+        ret = -1;
+        goto _exit2;
     }
 
     // Form the request JSON
     web::json::value encryption_request_json;
     encryption_request_json["private_key_hex"] = web::json::value::string(g_private_key);
     encryption_request_json["remote_public_key_hex"] = web::json::value::string(remote_public_key_hex);
-    encryption_request_json["plain_text"] = req_json.at(FIELD_NAME_PLAIN_TEXT).as_string();
+    encryption_request_json["plain_text"] = web::json::value::string(plain_text);
     param_string = encryption_request_json.serialize();
 
     // Call ECALL to perform encryption in TEE
@@ -606,7 +632,7 @@ int msg_handler::QueryRootKey(
               req_id.c_str(), sgx_status, t_strerror((int) sgx_status));
         resp_body = GetMessageReply(false, sgx_status, "ECALL raised an error!");
         ret = sgx_status;
-        goto _exit;
+        goto _exit2;
     }
 
     // Parse the result JSON
@@ -622,7 +648,7 @@ int msg_handler::QueryRootKey(
 
     FUNC_END;
 
-    _exit:
+    _exit2:
     if (result) {
         free(result);
         result = nullptr;
