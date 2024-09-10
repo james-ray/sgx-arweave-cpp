@@ -561,10 +561,25 @@ int msg_handler::QueryRootKey(
     std::string remote_public_key_hex;
     std::string plain_text;
     std::string param_string;
-    web::json::value req_json = web::json::value::parse(req_body);
+    web::json::value req_json;
     web::json::value response_json;
+    std::istringstream request_ids_stream(g_request_ids);
+    std::string id;
+    std::vector<std::string> request_ids;
+    auto it = request_ids.end();
+    size_t index = 0;
+    web::json::value encryption_request_json;
 
     FUNC_BEGIN;
+
+    try {
+        req_json = web::json::value::parse(req_body);
+    } catch (const std::exception &e) {
+        ERROR("Request ID: %s, invalid input data!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
+        ret = -1;
+        goto _exit2;
+    }
 
     // Validate request body
     if (!req_json.has_field(FIELD_NAME_REQUEST_ID) || !req_json.at(FIELD_NAME_REQUEST_ID).is_string()) {
@@ -591,21 +606,18 @@ int msg_handler::QueryRootKey(
     }
 
     // Find the index of request_id
-    std::istringstream request_ids_stream(g_request_ids);
-    std::string id;
-    std::vector<std::string> request_ids;
     while (std::getline(request_ids_stream, id, ',')) {
         request_ids.push_back(id);
     }
 
-    auto it = std::find(request_ids.begin(), request_ids.end(), request_id);
+    it = std::find(request_ids.begin(), request_ids.end(), request_id);
     if (it == request_ids.end()) {
         ERROR("Request ID: %s, request_id not found in g_request_ids!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "request_id not found.");
         ret = -1;
         goto _exit2;
     }
-    size_t index = std::distance(request_ids.begin(), it);
+    index = std::distance(request_ids.begin(), it);
 
     try {
         // Fetch the corresponding public key and plain text for the index
@@ -619,7 +631,6 @@ int msg_handler::QueryRootKey(
     }
 
     // Form the request JSON
-    web::json::value encryption_request_json;
     encryption_request_json["private_key_hex"] = web::json::value::string(g_private_key);
     encryption_request_json["remote_public_key_hex"] = web::json::value::string(remote_public_key_hex);
     encryption_request_json["plain_text"] = web::json::value::string(plain_text);
