@@ -8,7 +8,8 @@ enum eTaskType {
     /* Add your task types below */
     eTaskType_Generate = 101,
     eTaskType_Query = 102,
-    eTaskType_CombineSignatures = 103
+    eTaskType_CombineSignatures = 103,
+    eTaskType_EncryptText = 104
 };
 
 /**
