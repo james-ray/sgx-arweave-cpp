@@ -7,6 +7,7 @@
 #include "tasks/GenerateTask.h"
 #include "tasks/QueryTask.h"
 #include "tasks/CombineSignaturesTask.h"
+#include "tasks/EncryptTextTask.h"
 
 /**
  * The duration time (s) for the finished context
@@ -31,6 +32,7 @@ int ecall_init() {
     g_dispatcher.register_task(new GenerateTask());
     g_dispatcher.register_task(new QueryTask());
     g_dispatcher.register_task(new CombineSignaturesTask());
+    g_dispatcher.register_task(new EncryptTextTask());
     FUNC_END;
 
     return ret;
