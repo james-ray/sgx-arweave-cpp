@@ -54,12 +54,15 @@ BN CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std
     return shared_secret;
 }
 
-std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector <uint8_t> &key, const std::vector <uint8_t> &ciphertext) {
+std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &ciphertext) {
     // Initialize AES-256-CBC decryption
     safeheron::ecies::AES aes(256);
     std::string key_str(key.begin(), key.end());
-    //std::string iv(16, 0); // Assuming a zero IV for simplicity, replace with actual IV if available
-    std::string iv = "helloworld!@#"; // Set IV to "helloworld!@#"
+
+    // Create a 16-byte IV array initialized with zeros
+    std::string iv(16, 0);
+    std::string fixed_iv = "helloworld!@#";
+    std::copy(fixed_iv.begin(), fixed_iv.end(), iv.begin());
 
     if (!aes.initKey_CBC(key_str, iv)) {
         throw std::runtime_error("Failed to initialize AES key and IV");
