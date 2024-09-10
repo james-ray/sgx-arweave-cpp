@@ -30,7 +30,8 @@ extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext *> g_keyContext_list;
 
 
-BN CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std::vector <uint8_t> &remote_pubkey_bytes) {
+BN
+CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std::vector <uint8_t> &remote_pubkey_bytes) {
     // Initialize the curve
     const Curve *curve = safeheron::curve::GetCurveParam(CurveType::P256);
 
@@ -44,44 +45,102 @@ BN CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std
         throw std::runtime_error("Invalid remote_pubkey length");
     }
 
+    // Debug log to print the remote public key bytes
+    std::string remote_pubkey_hex = safeheron::encode::hex::EncodeToHex(remote_pubkey_bytes.data(),
+                                                                        remote_pubkey_bytes.size());
+    INFO_OUTPUT_CONSOLE("--->remote_pubkey_bytes: %s\n", remote_pubkey_hex.c_str());
+
+    // Debug log to print the remote public key
+    std::string remote_public_key_hex;
+    remote_public_key.x().ToHexStr(remote_public_key_hex);
+    INFO_OUTPUT_CONSOLE("--->remote_public_key: %s\n", remote_public_key_hex.c_str());
+
+    // Debug log to print the private key
+    std::string private_key_hex;
+    private_key.ToHexStr(private_key_hex);
+    INFO_OUTPUT_CONSOLE("--->private_key: %s\n", private_key_hex.c_str());
+
     // Compute the shared secret using ECC multiplication
     CurvePoint shared_secret_point = remote_public_key;
+    std::string shared_secret_point_before_hex;
+    shared_secret_point.x().ToHexStr(shared_secret_point_before_hex);
+    INFO_OUTPUT_CONSOLE("--->shared_secret_point before multiplication: %s\n", shared_secret_point_before_hex.c_str());
+
     shared_secret_point *= private_key;
+
+    std::string shared_secret_point_after_hex;
+    shared_secret_point.x().ToHexStr(shared_secret_point_after_hex);
+    INFO_OUTPUT_CONSOLE("--->shared_secret_point after multiplication: %s\n", shared_secret_point_after_hex.c_str());
 
     // Convert the shared secret point to a BN
     BN shared_secret = shared_secret_point.x();
+
+    // Convert the BN to a string in hexadecimal format
+    std::string shared_secret_hex;
+    shared_secret.ToHexStr(shared_secret_hex);
+
+    // Use INFO_OUTPUT_CONSOLE to debug print the shared secret
+    INFO_OUTPUT_CONSOLE("--->shared_secret: %s\n", shared_secret_hex.c_str());
 
     return shared_secret;
 }
 
 std::string CombineSignaturesTask::decrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &ciphertext) {
-    // Initialize AES-256-CBC decryption
-    safeheron::ecies::AES aes(256);
-    std::string key_str(key.begin(), key.end());
+    INFO_OUTPUT_CONSOLE("---> begin decrypt_with_aes_key\n");
 
-    // Create a 16-byte IV array initialized with zeros
-    std::string iv(16, 0);
-    std::string fixed_iv = "helloworld!@#";
-    std::copy(fixed_iv.begin(), fixed_iv.end(), iv.begin());
+    // Debug log to print the key
+    std::string key_hex = safeheron::encode::hex::EncodeToHex(key.data(), key.size());
+    INFO_OUTPUT_CONSOLE("--->AES key: %s\n", key_hex.c_str());
 
-    if (!aes.initKey_CBC(key_str, iv)) {
-        throw std::runtime_error("Failed to initialize AES key and IV");
+    // Debug log to print the ciphertext
+    std::string ciphertext_hex = safeheron::encode::hex::EncodeToHex(ciphertext.data(), ciphertext.size());
+    INFO_OUTPUT_CONSOLE("--->Ciphertext: %s\n", ciphertext_hex.c_str());
+
+    try {
+        // Split the IV and ciphertext
+        if (ciphertext.size() < 16) {
+            ERROR("Ciphertext too short to contain IV");
+            throw std::runtime_error("Ciphertext too short to contain IV");
+        }
+        std::vector<uint8_t> iv(ciphertext.begin(), ciphertext.begin() + 16);
+        std::vector<uint8_t> actual_ciphertext(ciphertext.begin() + 16, ciphertext.end());
+
+        // Initialize AES-256-CBC decryption
+        safeheron::ecies::AES aes(256);
+        std::string key_str(key.begin(), key.end());
+        std::string iv_str(iv.begin(), iv.end());
+
+        if (!aes.initKey_CBC(key_str, iv_str)) {
+            ERROR("Failed to initialize AES key for decryption");
+            throw std::runtime_error("Failed to initialize AES key for decryption");
+        }
+
+        std::string ciphertext_str(actual_ciphertext.begin(), actual_ciphertext.end());
+        std::string plaintext;
+
+        if (!aes.decrypt(ciphertext_str, plaintext)) {
+            ERROR("AES decryption failed");
+            throw std::runtime_error("AES decryption failed");
+        }
+
+        INFO_OUTPUT_CONSOLE("--->decrypt_with_aes_key: %s\n", plaintext.c_str());
+        return plaintext;
+    } catch (const std::exception &e) {
+        ERROR("Exception during AES decryption: %s", e.what());
+        throw;
     }
-
-    std::string ciphertext_str(ciphertext.begin(), ciphertext.end());
-    std::string plaintext;
-
-    if (!aes.decrypt(ciphertext_str, plaintext)) {
-        throw std::runtime_error("AES decryption failed");
-    }
-    INFO_OUTPUT_CONSOLE("--->decrypt_with_aes_key: %s\n", plaintext.c_str());
-    return plaintext;
 }
 
 std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const BN &local_private_key,
                                                             const std::string &encrypted_aes_key_base64,
                                                             const std::string &encrypted_seed_base64,
                                                             const std::string &remote_pubkey_hex) {
+    // Debug log to print the local private key
+    // Debug log to print the private key
+    std::string private_key_hex;
+    local_private_key.ToHexStr(private_key_hex);
+    INFO_OUTPUT_CONSOLE("--->in perform_ecdh_and_decrypt, private_key: %s\n", private_key_hex.c_str());
+
     // Decode base64 inputs
     std::string encrypted_aes_key_str = safeheron::encode::base64::DecodeFromBase64(encrypted_aes_key_base64);
     std::vector <uint8_t> encrypted_aes_key(encrypted_aes_key_str.begin(), encrypted_aes_key_str.end());
@@ -150,17 +209,29 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     // Load local private key from request JSON field
     BN local_private_key;
     std::string private_key_hex = req_root["private_key_hex"].asString();
-    local_private_key.FromHexStr(private_key_hex);
-    INFO_OUTPUT_CONSOLE("--->local_private_key: %s\n", private_key_hex.c_str());
+    local_private_key = local_private_key.FromHexStr(private_key_hex);
+
+    // Debug log to print the local private key before conversion
+    INFO_OUTPUT_CONSOLE("--->local_private_key before conversion: %s\n", private_key_hex.c_str());
+
+    // Convert the local private key to a string in hexadecimal format
+    std::string local_private_key_hex;
+    local_private_key.ToHexStr(local_private_key_hex);
+
     // Parse public_key_list, encrypted_aes_key_list, and encrypted_seed_list
     STR_ARRAY public_key_list = req_root["public_key_list"].asStringArrary();
     STR_ARRAY encrypted_aes_key_list = req_root["encrypted_aes_key_list"].asStringArrary();
     STR_ARRAY encrypted_seed_list = req_root["encrypted_seed_list"].asStringArrary();
 
     INFO_OUTPUT_CONSOLE("--->public_key_list size: %ld\n", public_key_list.size());
-    // Decrypt seeds
+
+// Decrypt seeds
     std::vector <std::string> plain_seeds;
     for (size_t i = 0; i < public_key_list.size(); ++i) {
+        // Debug log to print the local private key before passing it to perform_ecdh_and_decrypt
+        INFO_OUTPUT_CONSOLE("--->local_private_key before perform_ecdh_and_decrypt: %s\n",
+                            local_private_key_hex.c_str());
+
         std::string plain_seed = perform_ecdh_and_decrypt(local_private_key, encrypted_aes_key_list[i],
                                                           encrypted_seed_list[i], public_key_list[i]);
         plain_seeds.push_back(plain_seed);
