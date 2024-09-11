@@ -155,21 +155,6 @@ bool EncryptTextTask::verify_signature(const std::string &msg_digest, const std:
     return safeheron::curve::ecdsa::Verify(CurveType::P256, remote_public_key, digest32, sig64);
 }
 
-bool EncryptTextTask::is_timestamp_within_half_hour(const std::string &timestamp_str) {
-    // Get the current time in Unix timestamp format
-    auto now = std::chrono::system_clock::now();
-    auto now_time_t = std::chrono::system_clock::to_time_t(now);
-
-    // Convert the timestamp string to a long integer
-    long timestamp = std::stol(timestamp_str);
-
-    // Calculate the difference in seconds
-    long time_difference = now_time_t - timestamp;
-
-    // Check if the difference is within 30 minutes (1800 seconds)
-    return std::abs(time_difference) <= 1800;
-}
-
 int EncryptTextTask::execute(const std::string &request_id, const std::string &request, std::string &reply,
                              std::string &error_msg) {
     int ret = 0;
@@ -196,13 +181,6 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
     std::string msg_digest = req_root["msg_digest"].asString();
     std::string timestamp = req_root["timestamp"].asString();
     std::string req_request_id = req_root["request_id"].asString();
-
-    std::string timestamp = req_root["timestamp"].asString();
-    if (!is_timestamp_within_half_hour(timestamp)) {
-        error_msg = format_msg("Request ID: %s, timestamp is not within half an hour from now!", request_id.c_str());
-        ERROR("%s", error_msg.c_str());
-        return TEE_ERROR_INVALID_PARAMETER;
-    }
 
     // Derive SHA-256 hash and compare with msg_digest
     std::string derived_hash = derive_sha256_hash(req_request_id, timestamp);

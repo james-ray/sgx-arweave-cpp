@@ -61,5 +61,4 @@ private:
 
     std::string derive_sha256_hash(const std::string &request_id, const std::string &timestamp);
     bool verify_signature(const std::string &msg_digest, const std::string &signature, const std::string &remote_public_key_hex);
-    bool is_timestamp_within_half_hour(const std::string &timestamp_str);
 };

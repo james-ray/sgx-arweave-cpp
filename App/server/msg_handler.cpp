@@ -549,6 +549,21 @@ std::string get_plain_text_for_index(size_t index) {
     return plain_seeds[index];
 }
 
+bool is_timestamp_within_half_hour(const std::string &timestamp_str) {
+    // Get the current time in Unix timestamp format
+    auto now = std::chrono::system_clock::now();
+    auto now_time_t = std::chrono::system_clock::to_time_t(now);
+
+    // Convert the timestamp string to a long integer
+    long timestamp = std::stol(timestamp_str);
+
+    // Calculate the difference in seconds
+    long time_difference = now_time_t - timestamp;
+
+    // Check if the difference is within 10 minutes (600 seconds)
+    return std::abs(time_difference) <= 600;
+}
+
 int msg_handler::QueryRootKey(
         const std::string &req_id,
         const std::string &req_body,
@@ -604,6 +619,13 @@ int msg_handler::QueryRootKey(
         ret = -1;
         goto _exit2;
     }
+
+    if (!is_timestamp_within_half_hour(timestamp)) {
+        error_msg = format_msg("Request ID: %s, timestamp is not within half an hour from now!", request_id.c_str());
+        ERROR("%s", error_msg.c_str());
+        return TEE_ERROR_INVALID_PARAMETER;
+    }
+
 // Check if g_request_ids is empty or if request_id is not found in g_request_ids
     if (g_request_ids.empty() || g_request_ids.find(request_id) == std::string::npos) {
         ERROR("Request ID: %s, request_id not found in g_request_ids!", req_id.c_str());
