@@ -4,11 +4,13 @@
 #include "common/tee_error.h"
 #include "common/log_t.h"
 #include "json/json.h"
+#include "crypto-hash/hash256.h"
 #include "crypto-curve/curve_point.h"
 #include "crypto-curve/curve.h"
 #include <crypto-ecies/symm.h>
 #include <crypto-encode/base64.h>
 #include "crypto-encode/hex.h"
+#include "crypto-curve/ecdsa.h"
 #include <crypto-bn/rand.h>
 
 #include "Enclave_t.h"
@@ -99,6 +101,53 @@ std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(co
     return std::make_pair(encrypted_aes_key_base64, encrypted_text_base64);
 }
 
+// Function to concatenate request_id and timestamp and derive a SHA-256 hash using safeheron::hash::CHash256
+std::string EncryptTextTask::derive_sha256_hash(const std::string &request_id, const std::string &timestamp) {
+    std::string concatenated = request_id + timestamp;
+    unsigned char hash[CHash256::OUTPUT_SIZE];
+    CHash256 hasher;
+    hasher.Write(reinterpret_cast<const unsigned char *>(concatenated.c_str()), concatenated.size()).Finalize(hash);
+    std::stringstream ss;
+    for (int i = 0; i < CHash256::OUTPUT_SIZE; ++i) {
+        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
+    }
+    return ss.str();
+}
+
+// Function to verify the signature using msg_digest and remote_public_key_hex
+bool EncryptTextTask::verify_signature(const std::string &msg_digest, const std::string &signature, const std::string &remote_public_key_hex) {
+    // Decode the public key from hex
+    std::string remote_pubkey_str = safeheron::encode::hex::DecodeFromHex(remote_public_key_hex);
+    std::vector<uint8_t> remote_pubkey_bytes(remote_pubkey_str.begin(), remote_pubkey_str.end());
+    CurvePoint remote_public_key;
+    if (remote_pubkey_bytes.size() == 33) {
+        remote_public_key.DecodeCompressed(remote_pubkey_bytes.data(), CurveType::P256);
+    } else if (remote_pubkey_bytes.size() == 65) {
+        remote_public_key.DecodeFull(remote_pubkey_bytes.data(), CurveType::P256);
+    } else {
+        ERROR("Invalid remote_pubkey length");
+        return false;
+    }
+
+    // Convert msg_digest and signature to the required formats
+    std::vector<uint8_t> msg_digest_bytes = safeheron::encode::hex::DecodeFromHex(msg_digest);
+    std::vector<uint8_t> signature_bytes = safeheron::encode::hex::DecodeFromHex(signature);
+
+    if (msg_digest_bytes.size() != 32 || signature_bytes.size() != 64) {
+        ERROR("Invalid msg_digest or signature length");
+        return false;
+    }
+
+    uint8_t digest32[32];
+    std::copy(msg_digest_bytes.begin(), msg_digest_bytes.end(), digest32);
+
+    uint8_t sig64[64];
+    std::copy(signature_bytes.begin(), signature_bytes.end(), sig64);
+
+    // Verify the signature using safeheron::curve::ecdsa::Verify
+    return safeheron::curve::ecdsa::Verify(CurveType::P256, remote_public_key, digest32, sig64);
+}
+
 int EncryptTextTask::execute(const std::string &request_id, const std::string &request, std::string &reply, std::string &error_msg) {
     int ret = 0;
     JSON::Root req_root;
@@ -120,6 +169,25 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
     std::string private_key_hex = req_root["private_key_hex"].asString();
     std::string remote_public_key_hex = req_root["remote_public_key_hex"].asString();
     std::string plain_text = req_root["plain_text"].asString();
+    std::string signature = req_root["signature"].asString();
+    std::string msg_digest = req_root["msg_digest"].asString();
+    std::string timestamp = req_root["timestamp"].asString();
+    std::string request_id = req_root["request_id"].asString();
+
+    // Derive SHA-256 hash and compare with msg_digest
+    std::string derived_hash = derive_sha256_hash(request_id, timestamp);
+    if (derived_hash != msg_digest) {
+        error_msg = format_msg("Request ID: %s, msg_digest does not match derived hash %s !", request_id.c_str(), derived_hash);
+        ERROR("%s", error_msg.c_str());
+        return TEE_ERROR_INVALID_PARAMETER;
+    }
+
+    // Verify the signature
+    if (!verify_signature(msg_digest, signature, remote_public_key_hex)) {
+        error_msg = format_msg("Request ID: %s, signature verification failed!", request_id.c_str());
+        ERROR("%s", error_msg.c_str());
+        return TEE_ERROR_INVALID_PARAMETER;
+    }
 
     BN local_private_key;
     local_private_key = local_private_key.FromHexStr(private_key_hex);

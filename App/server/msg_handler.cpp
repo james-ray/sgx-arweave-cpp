@@ -581,8 +581,11 @@ int msg_handler::QueryRootKey(
         goto _exit2;
     }
 
-    // Validate request body
-    if (!req_json.has_field(FIELD_NAME_REQUEST_ID) || !req_json.at(FIELD_NAME_REQUEST_ID).is_string()) {
+// Validate request body
+    if (!req_json.has_field(FIELD_NAME_REQUEST_ID) || !req_json.at(FIELD_NAME_REQUEST_ID).is_string() ||
+        !req_json.has_field("signature") || !req_json.at("signature").is_string() ||
+        !req_json.has_field("timestamp") || !req_json.at("timestamp").is_string() ||
+        !req_json.has_field("msg_digest") || !req_json.at("msg_digest").is_string()) {
         ERROR("Request ID: %s, invalid input data!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
         ret = -1;
@@ -590,6 +593,8 @@ int msg_handler::QueryRootKey(
     }
 
     request_id = req_json.at(FIELD_NAME_REQUEST_ID).as_string();
+    std::string timestamp = req_json.at("timestamp").as_string();
+    std::string msg_digest = req_json.at("msg_digest").as_string();
 
     if (g_plain_seeds.empty()){
         ERROR("Request ID: %s, g_plain_seeds is empty!", req_id.c_str());
@@ -597,7 +602,7 @@ int msg_handler::QueryRootKey(
         ret = -1;
         goto _exit2;
     }
-    // Check if g_request_ids is empty or if request_id is not found in g_request_ids
+// Check if g_request_ids is empty or if request_id is not found in g_request_ids
     if (g_request_ids.empty() || g_request_ids.find(request_id) == std::string::npos) {
         ERROR("Request ID: %s, request_id not found in g_request_ids!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "request_id not found.");
@@ -605,7 +610,7 @@ int msg_handler::QueryRootKey(
         goto _exit2;
     }
 
-    // Find the index of request_id
+// Find the index of request_id
     while (std::getline(request_ids_stream, id, ',')) {
         request_ids.push_back(id);
     }
@@ -630,10 +635,14 @@ int msg_handler::QueryRootKey(
         goto _exit2;
     }
 
-    // Form the request JSON
+// Form the request JSON
     encryption_request_json["private_key_hex"] = web::json::value::string(g_private_key);
     encryption_request_json["remote_public_key_hex"] = web::json::value::string(remote_public_key_hex);
     encryption_request_json["plain_text"] = web::json::value::string(plain_text);
+    encryption_request_json["signature"] = req_json.at("signature");
+    encryption_request_json["timestamp"] = web::json::value::string(timestamp);
+    encryption_request_json["msg_digest"] = web::json::value::string(msg_digest);
+    encryption_request_json["request_id"] = web::json::value::string(request_id);
     param_string = encryption_request_json.serialize();
 
     // Call ECALL to perform encryption in TEE
