@@ -558,6 +558,8 @@ int msg_handler::QueryRootKey(
     char *result = nullptr;
     sgx_status_t sgx_status;
     std::string request_id;
+    std::string msg_digest;
+    std::string timestamp;
     std::string remote_public_key_hex;
     std::string plain_text;
     std::string param_string;
@@ -593,8 +595,8 @@ int msg_handler::QueryRootKey(
     }
 
     request_id = req_json.at(FIELD_NAME_REQUEST_ID).as_string();
-    std::string timestamp = req_json.at("timestamp").as_string();
-    std::string msg_digest = req_json.at("msg_digest").as_string();
+    timestamp = req_json.at("timestamp").as_string();
+    msg_digest = req_json.at("msg_digest").as_string();
 
     if (g_plain_seeds.empty()){
         ERROR("Request ID: %s, g_plain_seeds is empty!", req_id.c_str());
