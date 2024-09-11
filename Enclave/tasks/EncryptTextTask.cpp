@@ -32,7 +32,11 @@ BN EncryptTextTask::compute_shared_secret(const BN &private_key, const std::vect
     }
     CurvePoint shared_secret_point = remote_public_key;
     shared_secret_point *= private_key;
-    return shared_secret_point.x();
+    BN shared_secret = shared_secret_point.x();
+    std::string shared_secret_str;
+    shared_secret.ToHexStr(shared_secret_str);
+    INFO_OUTPUT_CONSOLE("Shared Secret: %s\n", shared_secret_str.c_str());
+    return shared_secret;
 }
 
 std::vector<uint8_t> EncryptTextTask::encrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &plaintext) {
@@ -53,6 +57,9 @@ std::vector<uint8_t> EncryptTextTask::encrypt_with_aes_key(const std::vector<uin
     }
     std::vector<uint8_t> result(iv.begin(), iv.end());
     result.insert(result.end(), ciphertext.begin(), ciphertext.end());
+    std::string aes_key_str;
+    safeheron::encode::hex::EncodeToHex(key.data(), key.size(), aes_key_str);
+    INFO_OUTPUT_CONSOLE("AES Key: %s\n", aes_key_str.c_str());
     return result;
 }
 
