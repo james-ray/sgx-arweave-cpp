@@ -9,7 +9,7 @@
 #include <crypto-ecies/symm.h>
 #include <crypto-encode/base64.h>
 #include "crypto-encode/hex.h"
-#include <cstdlib>
+#include <safeheron/rand.h> // Include the safeheron random library
 
 #include "Enclave_t.h"
 
@@ -17,10 +17,8 @@ using safeheron::curve::Curve;
 using safeheron::curve::CurvePoint;
 using safeheron::curve::CurveType;
 
-
 extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext *> g_keyContext_list;
-
 
 BN EncryptTextTask::compute_shared_secret(const BN &private_key, const std::vector<uint8_t> &remote_pubkey_bytes) {
     const Curve *curve = safeheron::curve::GetCurveParam(CurveType::P256);
@@ -74,7 +72,10 @@ std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(co
 
     // Generate a random AES key
     std::vector<uint8_t> aes_key(32);
-    std::generate(aes_key.begin(), aes_key.end(), rand);
+    BN p = BN::FromHexStr("ff");
+    for (int i = 0; i < 32; ++i) {
+        aes_key[i] = static_cast<uint8_t>(safeheron::rand::RandomBNLt(p).ToUint32());
+    }
 
     // Encrypt the plaintext using the random AES key
     std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
