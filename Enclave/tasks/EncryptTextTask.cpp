@@ -107,11 +107,7 @@ std::string EncryptTextTask::derive_sha256_hash(const std::string &request_id, c
     unsigned char hash[safeheron::hash::CHash256::OUTPUT_SIZE];
     safeheron::hash::CHash256 hasher;
     hasher.Write(reinterpret_cast<const unsigned char *>(concatenated.c_str()), concatenated.size()).Finalize(hash);
-    std::stringstream ss;
-    for (int i = 0; i < safeheron::hash::CHash256::OUTPUT_SIZE; ++i) {
-        ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
-    }
-    return ss.str();
+    return safeheron::encode::hex::EncodeToHex(hash, safeheron::hash::CHash256::OUTPUT_SIZE);
 }
 
 // Function to verify the signature using msg_digest and remote_public_key_hex
@@ -172,10 +168,10 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
     std::string signature = req_root["signature"].asString();
     std::string msg_digest = req_root["msg_digest"].asString();
     std::string timestamp = req_root["timestamp"].asString();
-    std::string request_id = req_root["request_id"].asString();
+    std::string req_request_id = req_root["request_id"].asString();
 
     // Derive SHA-256 hash and compare with msg_digest
-    std::string derived_hash = derive_sha256_hash(request_id, timestamp);
+    std::string derived_hash = derive_sha256_hash(req_request_id, timestamp);
     if (derived_hash != msg_digest) {
         error_msg = format_msg("Request ID: %s, msg_digest does not match derived hash %s !", request_id.c_str(), derived_hash);
         ERROR("%s", error_msg.c_str());
