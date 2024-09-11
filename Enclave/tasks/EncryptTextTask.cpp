@@ -108,6 +108,7 @@ std::string EncryptTextTask::derive_sha256_hash(const std::string &request_id, c
     if (!sha256_hash(concatenated, hash_hex)) {
         ERROR("derive sha256_hash failed");
     }
+    INFO_OUTPUT_CONSOLE("hash_hex: %s\n", hash_hex.c_str());
     return hash_hex;
 }
 

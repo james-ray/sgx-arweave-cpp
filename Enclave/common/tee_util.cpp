@@ -118,5 +118,6 @@ bool sha256_hash( const std::string& input, std::string& out_hex )
     sha256.Finalize( digest );
 
     out_hex = safeheron::encode::hex::EncodeToHex( digest, safeheron::hash::CSHA256::OUTPUT_SIZE );
+    INFO_OUTPUT_CONSOLE("SHA256 digest: %s\n", out_hex.c_str());
     return out_hex.length() == 0 ? false : true;
 }
