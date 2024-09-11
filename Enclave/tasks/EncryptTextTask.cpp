@@ -104,10 +104,11 @@ std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(co
 // Function to concatenate request_id and timestamp and derive a SHA-256 hash using safeheron::hash::CHash256
 std::string EncryptTextTask::derive_sha256_hash(const std::string &request_id, const std::string &timestamp) {
     std::string concatenated = request_id + timestamp;
-    unsigned char hash[safeheron::hash::CHash256::OUTPUT_SIZE];
-    safeheron::hash::CHash256 hasher;
-    hasher.Write(reinterpret_cast<const unsigned char *>(concatenated.c_str()), concatenated.size()).Finalize(hash);
-    return safeheron::encode::hex::EncodeToHex(hash, safeheron::hash::CHash256::OUTPUT_SIZE);
+    std::string hash_hex;
+    if (!sha256_hash(concatenated, hash_hex)) {
+        ERROR("derive sha256_hash failed");
+    }
+    return hash_hex;
 }
 
 // Function to verify the signature using msg_digest and remote_public_key_hex
@@ -126,19 +127,19 @@ bool EncryptTextTask::verify_signature(const std::string &msg_digest, const std:
     }
 
     // Convert msg_digest and signature to the required formats
-    std::vector<uint8_t> msg_digest_bytes = safeheron::encode::hex::DecodeFromHex(msg_digest);
-    std::vector<uint8_t> signature_bytes = safeheron::encode::hex::DecodeFromHex(signature);
+    std::string msg_digest_str = safeheron::encode::hex::DecodeFromHex(msg_digest);
+    std::string signature_str = safeheron::encode::hex::DecodeFromHex(signature);
 
-    if (msg_digest_bytes.size() != 32 || signature_bytes.size() != 64) {
+    if (msg_digest_str.size() != 32 || signature_str.size() != 64) {
         ERROR("Invalid msg_digest or signature length");
         return false;
     }
 
     uint8_t digest32[32];
-    std::copy(msg_digest_bytes.begin(), msg_digest_bytes.end(), digest32);
+    std::copy(msg_digest_str.begin(), msg_digest_str.end(), digest32);
 
     uint8_t sig64[64];
-    std::copy(signature_bytes.begin(), signature_bytes.end(), sig64);
+    std::copy(signature_str.begin(), signature_str.end(), sig64);
 
     // Verify the signature using safeheron::curve::ecdsa::Verify
     return safeheron::curve::ecdsa::Verify(CurveType::P256, remote_public_key, digest32, sig64);
