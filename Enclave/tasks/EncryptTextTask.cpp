@@ -104,11 +104,11 @@ std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(co
 // Function to concatenate request_id and timestamp and derive a SHA-256 hash using safeheron::hash::CHash256
 std::string EncryptTextTask::derive_sha256_hash(const std::string &request_id, const std::string &timestamp) {
     std::string concatenated = request_id + timestamp;
-    unsigned char hash[CHash256::OUTPUT_SIZE];
-    CHash256 hasher;
+    unsigned char hash[safeheron::hash::CHash256::OUTPUT_SIZE];
+    safeheron::hash::CHash256 hasher;
     hasher.Write(reinterpret_cast<const unsigned char *>(concatenated.c_str()), concatenated.size()).Finalize(hash);
     std::stringstream ss;
-    for (int i = 0; i < CHash256::OUTPUT_SIZE; ++i) {
+    for (int i = 0; i < safeheron::hash::CHash256::OUTPUT_SIZE; ++i) {
         ss << std::hex << std::setw(2) << std::setfill('0') << (int)hash[i];
     }
     return ss.str();
