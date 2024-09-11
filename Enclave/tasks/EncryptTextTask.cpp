@@ -4,20 +4,11 @@
 #include "common/tee_error.h"
 #include "common/log_t.h"
 #include "json/json.h"
-#include <vector>
-#include <string>
 #include "crypto-curve/curve_point.h"
-#include "crypto-bn/bn.h"
 #include "crypto-curve/curve.h"
 #include <crypto-ecies/symm.h>
 #include <crypto-encode/base64.h>
 #include "crypto-encode/hex.h"
-#include <stdlib.h>
-#include <unistd.h>
-#include <cstring>
-#include <mutex>
-#include <map>
-#include <sstream>
 
 #include "Enclave_t.h"
 
