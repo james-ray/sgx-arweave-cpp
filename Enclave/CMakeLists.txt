@@ -24,6 +24,7 @@ set(ENCLAVE_SRC_FILES
         tasks/GenerateTask.cpp
         tasks/QueryTask.cpp
         tasks/CombineSignaturesTask.cpp
+        tasks/EncryptTextTask.cpp
         )
 
 
