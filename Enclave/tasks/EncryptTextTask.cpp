@@ -72,10 +72,8 @@ std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(co
 
     // Generate a random AES key
     std::vector<uint8_t> aes_key(32);
-    BN p = BN::FromHexStr("ff");
-    for (int i = 0; i < 32; ++i) {
-        aes_key[i] = static_cast<uint8_t>(safeheron::rand::RandomBNLt(p).ToUint32());
-    }
+    BN rand_bn = safeheron::rand::RandomBNStrict(256);
+    rand_bn.ToBytesBE(reinterpret_cast<char*>(aes_key.data()));
 
     // Encrypt the plaintext using the random AES key
     std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
