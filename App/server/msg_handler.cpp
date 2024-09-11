@@ -621,9 +621,10 @@ int msg_handler::QueryRootKey(
     }
 
     if (!is_timestamp_within_half_hour(timestamp)) {
-        error_msg = format_msg("Request ID: %s, timestamp is not within half an hour from now!", request_id.c_str());
-        ERROR("%s", error_msg.c_str());
-        return TEE_ERROR_INVALID_PARAMETER;
+        ERROR("Request ID: %s, timestamp is not within 10 mins !", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "timestamp is not within 10 mins.");
+        ret = -1;
+        goto _exit2;
     }
 
 // Check if g_request_ids is empty or if request_id is not found in g_request_ids
