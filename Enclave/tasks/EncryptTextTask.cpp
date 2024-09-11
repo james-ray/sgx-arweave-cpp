@@ -9,6 +9,7 @@
 #include <crypto-ecies/symm.h>
 #include <crypto-encode/base64.h>
 #include "crypto-encode/hex.h"
+#include <cstdlib>
 
 #include "Enclave_t.h"
 
@@ -73,7 +74,7 @@ std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(co
 
     // Generate a random AES key
     std::vector<uint8_t> aes_key(32);
-    std::generate(aes_key.begin(), aes_key.end(), std::rand);
+    std::generate(aes_key.begin(), aes_key.end(), rand);
 
     // Encrypt the plaintext using the random AES key
     std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
