@@ -9,7 +9,7 @@
 #include <crypto-ecies/symm.h>
 #include <crypto-encode/base64.h>
 #include "crypto-encode/hex.h"
-#include <safeheron/rand.h> // Include the safeheron random library
+#include <crypto-bn/rand.h>
 
 #include "Enclave_t.h"
 
