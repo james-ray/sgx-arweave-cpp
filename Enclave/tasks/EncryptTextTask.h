@@ -59,6 +59,6 @@ private:
      */
     std::pair<std::string, std::string> perform_ecdh_and_encrypt(const BN &local_private_key, const std::string &plaintext, const std::string &remote_pubkey_hex);
 
-    std::string derive_sha256_hash(const std::string &request_id, const std::string &timestamp)
+    std::string derive_sha256_hash(const std::string &request_id, const std::string &timestamp);
     bool verify_signature(const std::string &msg_digest, const std::string &signature, const std::string &remote_public_key_hex);
 };
