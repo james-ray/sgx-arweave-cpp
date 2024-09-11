@@ -1,16 +1,10 @@
 #include "../shell/Dispatcher.h"
-#include <crypto-tss-rsa/tss_rsa.h>
-#include <crypto-tss-rsa/RSASigShare.h>
-#include <crypto-tss-rsa/RSAPublicKey.h>
-#include <crypto-tss-rsa/RSAKeyMeta.h>
 #include <crypto-encode/hex.h>
 #include <crypto-bn/bn.h>
 #include <string>
 #include <vector>
+#include <utility>
 
-using safeheron::tss_rsa::RSASigShare;
-using safeheron::tss_rsa::RSAPublicKey;
-using safeheron::tss_rsa::RSAKeyMeta;
 using safeheron::bignum::BN;
 
 class EncryptTextTask: public Task
@@ -51,7 +45,7 @@ private:
     int get_reply_string(const std::string &request_id, const std::string &encrypted_aes_key, const std::string &encrypted_text, std::string &out_str);
 
     BN compute_shared_secret(const BN &private_key, const std::vector<uint8_t> &remote_pubkey_bytes);
-    std::vector<uint8_t> encrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &plaintext);
+    std::vector<uint8_t>    encrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &plaintext);
     /**
      * @brief : Perform ECDH and encrypt the plaintext.
      * @param local_private_key[in] : The local private key.
