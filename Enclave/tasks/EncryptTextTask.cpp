@@ -57,9 +57,6 @@ std::vector<uint8_t> EncryptTextTask::encrypt_with_aes_key(const std::vector<uin
     }
     std::vector<uint8_t> result(iv.begin(), iv.end());
     result.insert(result.end(), ciphertext.begin(), ciphertext.end());
-    std::string aes_key_str;
-    safeheron::encode::hex::EncodeToHex(key.data(), key.size(), aes_key_str);
-    INFO_OUTPUT_CONSOLE("AES Key: %s\n", aes_key_str.c_str());
     return result;
 }
 
@@ -83,6 +80,10 @@ std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(co
     std::string temp_str;
     rand_bn.ToBytesBE(temp_str);
     std::copy(temp_str.begin(), temp_str.begin() + 32, aes_key.begin());
+    // Print the random number
+    std::string rand_bn_str;
+    rand_bn.ToHexStr(rand_bn_str);
+    INFO_OUTPUT_CONSOLE("Random Number: %s\n", rand_bn_str.c_str());
 
     // Encrypt the plaintext using the random AES key
     std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
