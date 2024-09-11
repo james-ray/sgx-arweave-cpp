@@ -22,7 +22,7 @@ using safeheron::curve::CurveType;
 extern std::mutex g_list_mutex;
 extern std::map<std::string, KeyShardContext *> g_keyContext_list;
 
-BN EncryptTextTask::compute_shared_secret(const BN &private_key, const std::vector<uint8_t> &remote_pubkey_bytes) {
+BN EncryptTextTask::compute_shared_secret(const BN &private_key, const std::vector <uint8_t> &remote_pubkey_bytes) {
     const Curve *curve = safeheron::curve::GetCurveParam(CurveType::P256);
     CurvePoint remote_public_key;
     if (remote_pubkey_bytes.size() == 33) {
@@ -41,8 +41,9 @@ BN EncryptTextTask::compute_shared_secret(const BN &private_key, const std::vect
     return shared_secret;
 }
 
-std::vector<uint8_t> EncryptTextTask::encrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &plaintext) {
-    std::vector<uint8_t> iv(16, 0);
+std::vector <uint8_t>
+EncryptTextTask::encrypt_with_aes_key(const std::vector <uint8_t> &key, const std::vector <uint8_t> &plaintext) {
+    std::vector <uint8_t> iv(16, 0);
     std::string fixed_iv = "sign_node!@#";
     std::copy(fixed_iv.begin(), fixed_iv.end(), iv.begin());
     //std::generate(iv.begin(), iv.end(), std::rand);
@@ -57,15 +58,17 @@ std::vector<uint8_t> EncryptTextTask::encrypt_with_aes_key(const std::vector<uin
     if (!aes.encrypt(plaintext_str, ciphertext)) {
         throw std::runtime_error("AES encryption failed");
     }
-    std::vector<uint8_t> result(iv.begin(), iv.end());
+    std::vector <uint8_t> result(iv.begin(), iv.end());
     result.insert(result.end(), ciphertext.begin(), ciphertext.end());
     return result;
 }
 
-std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(const BN &local_private_key, const std::string &plaintext, const std::string &remote_pubkey_hex) {
+std::pair <std::string, std::string>
+EncryptTextTask::perform_ecdh_and_encrypt(const BN &local_private_key, const std::string &plaintext,
+                                          const std::string &remote_pubkey_hex) {
     // Decode the remote public key from hex
     std::string remote_pubkey_str = safeheron::encode::hex::DecodeFromHex(remote_pubkey_hex);
-    std::vector<uint8_t> remote_pubkey_bytes(remote_pubkey_str.begin(), remote_pubkey_str.end());
+    std::vector <uint8_t> remote_pubkey_bytes(remote_pubkey_str.begin(), remote_pubkey_str.end());
     if (remote_pubkey_bytes.size() != 33 && remote_pubkey_bytes.size() != 65) {
         throw std::runtime_error("Invalid remote_pubkey length");
     }
@@ -74,10 +77,10 @@ std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(co
     BN shared_secret = compute_shared_secret(local_private_key, remote_pubkey_bytes);
     std::string shared_secret_str;
     shared_secret.ToBytesBE(shared_secret_str);
-    std::vector<uint8_t> shared_secret_bytes(shared_secret_str.begin(), shared_secret_str.end());
+    std::vector <uint8_t> shared_secret_bytes(shared_secret_str.begin(), shared_secret_str.end());
 
     // Generate a random AES key
-    std::vector<uint8_t> aes_key(32);
+    std::vector <uint8_t> aes_key(32);
     BN rand_bn = safeheron::rand::RandomBNStrict(256);
     std::string temp_str;
     rand_bn.ToBytesBE(temp_str);
@@ -88,15 +91,17 @@ std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(co
     INFO_OUTPUT_CONSOLE("Random Number: %s\n", rand_bn_str.c_str());
 
     // Encrypt the plaintext using the random AES key
-    std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
-    std::vector<uint8_t> encrypted_text = encrypt_with_aes_key(aes_key, plaintext_bytes);
+    std::vector <uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
+    std::vector <uint8_t> encrypted_text = encrypt_with_aes_key(aes_key, plaintext_bytes);
 
     // Encrypt the random AES key using the shared secret
-    std::vector<uint8_t> encrypted_aes_key = encrypt_with_aes_key(shared_secret_bytes, aes_key);
+    std::vector <uint8_t> encrypted_aes_key = encrypt_with_aes_key(shared_secret_bytes, aes_key);
 
     // Encode the encrypted AES key and encrypted text to base64
-    std::string encrypted_aes_key_base64 = safeheron::encode::base64::EncodeToBase64(encrypted_aes_key.data(), encrypted_aes_key.size());
-    std::string encrypted_text_base64 = safeheron::encode::base64::EncodeToBase64(encrypted_text.data(), encrypted_text.size());
+    std::string encrypted_aes_key_base64 = safeheron::encode::base64::EncodeToBase64(encrypted_aes_key.data(),
+                                                                                     encrypted_aes_key.size());
+    std::string encrypted_text_base64 = safeheron::encode::base64::EncodeToBase64(encrypted_text.data(),
+                                                                                  encrypted_text.size());
 
     return std::make_pair(encrypted_aes_key_base64, encrypted_text_base64);
 }
@@ -108,15 +113,17 @@ std::string EncryptTextTask::derive_sha256_hash(const std::string &request_id, c
     if (!sha256_hash(concatenated, hash_hex)) {
         ERROR("derive sha256_hash failed");
     }
+    INFO_OUTPUT_CONSOLE("concatenated: %s\n", concatenated.c_str());
     INFO_OUTPUT_CONSOLE("hash_hex: %s\n", hash_hex.c_str());
     return hash_hex;
 }
 
 // Function to verify the signature using msg_digest and remote_public_key_hex
-bool EncryptTextTask::verify_signature(const std::string &msg_digest, const std::string &signature, const std::string &remote_public_key_hex) {
+bool EncryptTextTask::verify_signature(const std::string &msg_digest, const std::string &signature,
+                                       const std::string &remote_public_key_hex) {
     // Decode the public key from hex
     std::string remote_pubkey_str = safeheron::encode::hex::DecodeFromHex(remote_public_key_hex);
-    std::vector<uint8_t> remote_pubkey_bytes(remote_pubkey_str.begin(), remote_pubkey_str.end());
+    std::vector <uint8_t> remote_pubkey_bytes(remote_pubkey_str.begin(), remote_pubkey_str.end());
     CurvePoint remote_public_key;
     if (remote_pubkey_bytes.size() == 33) {
         remote_public_key.DecodeCompressed(remote_pubkey_bytes.data(), CurveType::P256);
@@ -146,7 +153,8 @@ bool EncryptTextTask::verify_signature(const std::string &msg_digest, const std:
     return safeheron::curve::ecdsa::Verify(CurveType::P256, remote_public_key, digest32, sig64);
 }
 
-int EncryptTextTask::execute(const std::string &request_id, const std::string &request, std::string &reply, std::string &error_msg) {
+int EncryptTextTask::execute(const std::string &request_id, const std::string &request, std::string &reply,
+                             std::string &error_msg) {
     int ret = 0;
     JSON::Root req_root;
 
@@ -175,7 +183,8 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
     // Derive SHA-256 hash and compare with msg_digest
     std::string derived_hash = derive_sha256_hash(req_request_id, timestamp);
     if (derived_hash != msg_digest) {
-        error_msg = format_msg("Request ID: %s, msg_digest does not match derived hash %s !", request_id.c_str(), derived_hash);
+        error_msg = format_msg("Request ID: %s, msg_digest does not match derived hash %s !", request_id.c_str(),
+                               derived_hash);
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_INVALID_PARAMETER;
     }
