@@ -73,7 +73,9 @@ std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(co
     // Generate a random AES key
     std::vector<uint8_t> aes_key(32);
     BN rand_bn = safeheron::rand::RandomBNStrict(256);
-    rand_bn.ToBytesBE(reinterpret_cast<char*>(aes_key.data()));
+    std::string temp_str;
+    rand_bn.ToBytesBE(temp_str);
+    std::copy(temp_str.begin(), temp_str.begin() + 32, aes_key.begin());
 
     // Encrypt the plaintext using the random AES key
     std::vector<uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
@@ -89,8 +91,7 @@ std::pair<std::string, std::string> EncryptTextTask::perform_ecdh_and_encrypt(co
     return std::make_pair(encrypted_aes_key_base64, encrypted_text_base64);
 }
 
-int EncryptTextTask::execute(const std::string &request_id, const std::string &request, std::string &reply,
-                             std::string &error_msg) {
+int EncryptTextTask::execute(const std::string &request_id, const std::string &request, std::string &reply, std::string &error_msg) {
     int ret = 0;
     JSON::Root req_root;
 
@@ -103,25 +104,22 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
 
     req_root = JSON::Root::parse(request);
     if (!req_root.is_valid()) {
-        error_msg = format_msg("Request ID: %s, request body is not in JSON! request: %s",
-                               request_id.c_str(), request.c_str());
+        error_msg = format_msg("Request ID: %s, request body is not in JSON! request: %s", request.c_str());
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_INVALID_PARAMETER;
     }
 
-    // Extract fields from request JSON
     std::string private_key_hex = req_root["private_key_hex"].asString();
     std::string remote_public_key_hex = req_root["remote_public_key_hex"].asString();
     std::string plain_text = req_root["plain_text"].asString();
 
-    // Convert private_key_hex to BN
     BN local_private_key;
     local_private_key = local_private_key.FromHexStr(private_key_hex);
 
-    // Encrypt plain_text and generate a random AES key
-    auto [encrypted_aes_key, encrypted_text] = perform_ecdh_and_encrypt(local_private_key, plain_text, remote_public_key_hex);
+    auto result = perform_ecdh_and_encrypt(local_private_key, plain_text, remote_public_key_hex);
+    std::string encrypted_aes_key = result.first;
+    std::string encrypted_text = result.second;
 
-    // Prepare response JSON
     ret = get_reply_string(request_id, encrypted_aes_key, encrypted_text, reply);
 
     FUNC_END;
