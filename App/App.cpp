@@ -8,6 +8,9 @@
 #include <string.h>
 #include <pwd.h>
 #include <sgx_urts.h>
+#include <signal.h>
+#include <atomic>
+#include <iostream>
 
 #define PROJECT_NAME    "tee-arweave"
 
@@ -22,6 +25,8 @@ std::string g_sign_node_public_keys;
 std::string g_root_seed_query_path;
 std::string g_request_ids;
 int g_max_thread_task_count = 100;
+// Global atomic flag to indicate if the server should exit
+std::atomic<bool> g_should_exit(false);
 
 // Start the HTTP listen server, and receive
 // request from clients
@@ -44,8 +49,14 @@ void HttpServer_Shutdown()
     }
 }
 
-int SGX_CDECL main(int argc, char *argv[])
-{
+// Signal handler function
+void signal_handler(int signal) {
+    if (signal == SIGINT || signal == SIGTERM) {
+        g_should_exit = true;
+    }
+}
+
+int SGX_CDECL main(int argc, char *argv[]) {
     int ret = 0;
     sgx_status_t sgx_status;
     char* enclave_id = nullptr;
@@ -54,121 +65,125 @@ int SGX_CDECL main(int argc, char *argv[])
     std::string listen_addr;
     int log_enable = 0;
     std::string log_path;
-    std::string input_line;
     TeeLogHelper* glog_helper = nullptr;
 
+    // Set up signal handler
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
+
     // Read configuration file server.ini
-    if ( (ret = cfg.load_file("./server.ini")) != ERR_INI_OK ) {
-        INFO_OUTPUT_CONSOLE( "Failed to load configure file ./server.ini!" );
+    if ((ret = cfg.load_file("./server.ini")) != ERR_INI_OK) {
+        INFO_OUTPUT_CONSOLE("Failed to load configure file ./server.ini!");
         return -1;
     }
-    listen_addr = cfg.get_string( "server", "host_address" );
-    if ( listen_addr.length() == 0 ) {
-        INFO_OUTPUT_CONSOLE( "Failed to read 'host_address' from configuration file ./server.ini!" );
+    listen_addr = cfg.get_string("server", "host_address");
+    if (listen_addr.length() == 0) {
+        INFO_OUTPUT_CONSOLE("Failed to read 'host_address' from configuration file ./server.ini!");
         return -1;
     }
-    g_key_shard_generation_path = cfg.get_string( "server", "key_shard_generation_path" );
-    if ( g_key_shard_generation_path.length() == 0 ) {
-        INFO_OUTPUT_CONSOLE( "Failed to read 'key_shard_generation_path' from configuration file ./server.ini!" );
+    g_key_shard_generation_path = cfg.get_string("server", "key_shard_generation_path");
+    if (g_key_shard_generation_path.length() == 0) {
+        INFO_OUTPUT_CONSOLE("Failed to read 'key_shard_generation_path' from configuration file ./server.ini!");
         return -1;
     }
-    g_key_shard_query_path = cfg.get_string( "server", "key_shard_query_path" );
-    if ( g_key_shard_query_path.length() == 0 ) {
-        INFO_OUTPUT_CONSOLE( "Failed to read 'key_shard_query_path' from configuration file ./server.ini!" );
+    g_key_shard_query_path = cfg.get_string("server", "key_shard_query_path");
+    if (g_key_shard_query_path.length() == 0) {
+        INFO_OUTPUT_CONSOLE("Failed to read 'key_shard_query_path' from configuration file ./server.ini!");
         return -1;
     }
-    g_combine_sigs_path = cfg.get_string( "server", "combine_sigs_path" );
-    if ( g_combine_sigs_path.length() == 0 ) {
-        INFO_OUTPUT_CONSOLE( "Failed to read 'g_combine_sigs_path' from configuration file ./server.ini!" );
+    g_combine_sigs_path = cfg.get_string("server", "combine_sigs_path");
+    if (g_combine_sigs_path.length() == 0) {
+        INFO_OUTPUT_CONSOLE("Failed to read 'g_combine_sigs_path' from configuration file ./server.ini!");
         return -1;
     }
-    g_root_seed_query_path = cfg.get_string( "server", "root_seed_query_path" );
-    if ( g_root_seed_query_path.length() == 0 ) {
-        INFO_OUTPUT_CONSOLE( "Failed to read 'g_root_seed_query_path' from configuration file ./server.ini!" );
+    g_root_seed_query_path = cfg.get_string("server", "root_seed_query_path");
+    if (g_root_seed_query_path.length() == 0) {
+        INFO_OUTPUT_CONSOLE("Failed to read 'g_root_seed_query_path' from configuration file ./server.ini!");
         return -1;
     }
-    g_private_key = cfg.get_string( "server", "private_key" );
-    if ( g_private_key.length() == 0 ) {
-        INFO_OUTPUT_CONSOLE( "Failed to read 'g_private_key' from configuration file ./server.ini!" );
+    g_private_key = cfg.get_string("server", "private_key");
+    if (g_private_key.length() == 0) {
+        INFO_OUTPUT_CONSOLE("Failed to read 'g_private_key' from configuration file ./server.ini!");
         return -1;
     }
-    g_sign_node_public_keys = cfg.get_string( "server", "sign_node_public_keys" );
-    if ( g_sign_node_public_keys.length() == 0 ) {
-        INFO_OUTPUT_CONSOLE( "Failed to read 'g_sign_node_public_keys' from configuration file ./server.ini!" );
+    g_sign_node_public_keys = cfg.get_string("server", "sign_node_public_keys");
+    if (g_sign_node_public_keys.length() == 0) {
+        INFO_OUTPUT_CONSOLE("Failed to read 'g_sign_node_public_keys' from configuration file ./server.ini!");
         return -1;
     }
-    g_request_ids = cfg.get_string( "server", "request_ids" );
-    if ( g_request_ids.length() == 0 ) {
-        INFO_OUTPUT_CONSOLE( "Failed to read 'g_request_ids' from configuration file ./server.ini!" );
+    g_request_ids = cfg.get_string("server", "request_ids");
+    if (g_request_ids.length() == 0) {
+        INFO_OUTPUT_CONSOLE("Failed to read 'g_request_ids' from configuration file ./server.ini!");
         return -1;
     }
-    g_max_thread_task_count = cfg.get_int( "server", "max_thread_task_count" );
-    if ( g_max_thread_task_count <= 0 ) {
-        INFO_OUTPUT_CONSOLE( "Failed to read 'max_thread_task_count' from configuration file ./server.ini!" );
+    g_max_thread_task_count = cfg.get_int("server", "max_thread_task_count");
+    if (g_max_thread_task_count <= 0) {
+        INFO_OUTPUT_CONSOLE("Failed to read 'max_thread_task_count' from configuration file ./server.ini!");
         return -1;
     }
-    log_enable = cfg.get_int( "log", "log_enable" );
-    log_path = cfg.get_string( "log", "log_path" );
-    INFO_OUTPUT_CONSOLE( "Configuration file ./server.ini is loaded!" );
+    log_enable = cfg.get_int("log", "log_enable");
+    log_path = cfg.get_string("log", "log_path");
+    INFO_OUTPUT_CONSOLE("Configuration file ./server.ini is loaded!");
 
     // Initialize log file
-    if ( 1 == log_enable ) {
-        if ( log_path.length() == 0 ) {
-            INFO_OUTPUT_CONSOLE( "Log service is enabled, but failed to read 'log_path' from configuration file ./server.ini!" );
+    if (1 == log_enable) {
+        if (log_path.length() == 0) {
+            INFO_OUTPUT_CONSOLE("Log service is enabled, but failed to read 'log_path' from configuration file ./server.ini!");
         }
-        glog_helper = new TeeLogHelper( log_path.c_str(), PROJECT_NAME );
+        glog_helper = new TeeLogHelper(log_path.c_str(), PROJECT_NAME);
     }
-    INFO_OUTPUT_CONSOLE( "Log service is enabled and log file will be written in %s!", log_path.c_str() );
+    INFO_OUTPUT_CONSOLE("Log service is enabled and log file will be written in %s!", log_path.c_str());
 
     // Initialize enclave
-    sgx_status = sgx_create_enclave( (const char*)argv[1], 0, nullptr, nullptr, &global_eid, nullptr );
-    if (sgx_status != SGX_SUCCESS ) {
+    sgx_status = sgx_create_enclave((const char*)argv[1], 0, nullptr, nullptr, &global_eid, nullptr);
+    if (sgx_status != SGX_SUCCESS) {
         ERROR("Initialize enclave failed! enclave file: %s, error message: %s", argv[1], t_strerror((int)sgx_status));
         ret = -1;
         goto _exit;
     }
-    sgx_status = ecall_get_enclave_id( global_eid, &ret, &enclave_id, &enclave_id_len );
+    sgx_status = ecall_get_enclave_id(global_eid, &ret, &enclave_id, &enclave_id_len);
     if (sgx_status != SGX_SUCCESS || ret != 0) {
         ERROR("ecall_get_enclave_id() failed, error message: %s", t_strerror((int)sgx_status));
         ret = -1;
         goto _exit;
     }
-    INFO_OUTPUT_CONSOLE( "Enclave is created! Enclave ID: %s", enclave_id );
+    INFO_OUTPUT_CONSOLE("Enclave is created! Enclave ID: %s", enclave_id);
 
-    sgx_status = ecall_init( global_eid, &ret );
+    sgx_status = ecall_init(global_eid, &ret);
     if (sgx_status != SGX_SUCCESS || ret != 0) {
-        ERROR( "ecall_init() failed, error message: %s", t_strerror((int)sgx_status) );
+        ERROR("ecall_init() failed, error message: %s", t_strerror((int)sgx_status));
         ret = -1;
         goto _exit;
     }
-    INFO_OUTPUT_CONSOLE( "ecall_init() is called successfully!");
-    
+    INFO_OUTPUT_CONSOLE("ecall_init() is called successfully!");
+
     // Initializing the REST service listener
-    HttpServer_Start( listen_addr );
+    HttpServer_Start(listen_addr);
 
-    // End server until any key is pressed
-    INFO_OUTPUT_CONSOLE("Press ENTER to exit.");
-    getline(std::cin, input_line);
+    // Loop forever until signal is received
+    while (!g_should_exit) {
+        std::this_thread::sleep_for(std::chrono::seconds(1));
+    }
 
-_exit:
+    _exit:
     // Server exit
-    INFO_OUTPUT_CONSOLE( "Waiting for running tasks to end...\n");
+    INFO_OUTPUT_CONSOLE("Waiting for running tasks to end...\n");
     HttpServer_Shutdown();
-    INFO_OUTPUT_CONSOLE( "\nServer closed!");
+    INFO_OUTPUT_CONSOLE("\nServer closed!");
 
     // Free enclave
-    ecall_free( global_eid );
+    ecall_free(global_eid);
 
     // Destroy enclave
     sgx_destroy_enclave(global_eid);
 
-    if ( glog_helper) {
+    if (glog_helper) {
         delete glog_helper;
         glog_helper = nullptr;
     }
 
-    if ( enclave_id ) {
-        free( enclave_id );
+    if (enclave_id) {
+        free(enclave_id);
         enclave_id = nullptr;
     }
 
