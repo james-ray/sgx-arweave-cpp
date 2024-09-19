@@ -248,8 +248,8 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     std::vector <std::string> plain_seeds;
     for (size_t i = 0; i < public_key_list.size(); ++i) {
         // Debug log to print the local private key before passing it to perform_ecdh_and_decrypt
-        INFO_OUTPUT_CONSOLE("--->local_private_key before perform_ecdh_and_decrypt: %s\n",
-                            local_private_key_hex.c_str());
+        //INFO_OUTPUT_CONSOLE("--->local_private_key before perform_ecdh_and_decrypt: %s\n",
+        //                    local_private_key_hex.c_str());
 
         std::string plain_seed = perform_ecdh_and_decrypt(local_private_key, encrypted_aes_key_list[i],
                                                           encrypted_seed_list[i], public_key_list[i]);
