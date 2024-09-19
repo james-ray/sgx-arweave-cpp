@@ -210,7 +210,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     std::string encrypted_private_key_hex = req_root["encrypted_private_key_hex"].asString();
     std::string aes_key_hex = req_root["aes_key_hex"].asString();
 
-    / Decode hex strings to byte vectors
+    // Decode hex strings to byte vectors
     std::string encrypted_private_key_str = safeheron::encode::hex::DecodeFromHex(encrypted_private_key_hex);
     std::vector<uint8_t> encrypted_private_key(encrypted_private_key_str.begin(), encrypted_private_key_str.end());
 
