@@ -225,8 +225,11 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
     std::string aes_key_hex = req_root["aes_key_hex"].asString();
 
     // Decode hex strings to byte vectors
-    std::vector<uint8_t> encrypted_private_key = safeheron::encode::hex::DecodeFromHex(encrypted_private_key_hex);
-    std::vector<uint8_t> aes_key = safeheron::encode::hex::DecodeFromHex(aes_key_hex);
+    std::string encrypted_private_key_str = safeheron::encode::hex::DecodeFromHex(encrypted_private_key_hex);
+    std::vector<uint8_t> encrypted_private_key(encrypted_private_key_str.begin(), encrypted_private_key_str.end());
+
+    std::string aes_key_str = safeheron::encode::hex::DecodeFromHex(aes_key_hex);
+    std::vector<uint8_t> aes_key(aes_key_str.begin(), aes_key_str.end());
 
     // Decrypt the private key using the AES key
     std::string decrypted_private_key_str = decrypt_with_aes_key(aes_key, encrypted_private_key);
