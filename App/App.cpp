@@ -103,12 +103,12 @@ int SGX_CDECL main(int argc, char *argv[]) {
         return -1;
     }
     g_enc_private_key = cfg.get_string("server", "encrypted_private_key");
-    if (g_private_key.length() == 0) {
+    if (g_enc_private_key.length() == 0) {
         INFO_OUTPUT_CONSOLE("Failed to read 'g_enc_private_key' from configuration file ./server.ini!");
         return -1;
     }
     g_request_id = cfg.get_string("server", "request_id");
-    if (g_private_key.length() == 0) {
+    if (g_request_id.length() == 0) {
         INFO_OUTPUT_CONSOLE("Failed to read 'g_request_id' from configuration file ./server.ini!");
         return -1;
     }
