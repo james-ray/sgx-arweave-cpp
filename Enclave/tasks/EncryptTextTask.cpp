@@ -155,6 +155,52 @@ bool EncryptTextTask::verify_signature(const std::string &msg_digest, const std:
     return safeheron::curve::ecdsa::Verify(CurveType::P256, remote_public_key, digest32, sig64);
 }
 
+std::string EncryptTextTask::decrypt_with_aes_key(const std::vector<uint8_t> &key, const std::vector<uint8_t> &ciphertext) {
+    INFO_OUTPUT_CONSOLE("---> begin decrypt_with_aes_key\n");
+
+    // Debug log to print the key
+    std::string key_hex = safeheron::encode::hex::EncodeToHex(key.data(), key.size());
+    INFO_OUTPUT_CONSOLE("--->AES key: %s\n", key_hex.c_str());
+
+    // Debug log to print the ciphertext
+    std::string ciphertext_hex = safeheron::encode::hex::EncodeToHex(ciphertext.data(), ciphertext.size());
+    INFO_OUTPUT_CONSOLE("--->Ciphertext: %s\n", ciphertext_hex.c_str());
+
+    try {
+        // Split the IV and ciphertext
+        if (ciphertext.size() < 16) {
+            ERROR("Ciphertext too short to contain IV");
+            throw std::runtime_error("Ciphertext too short to contain IV");
+        }
+        std::vector<uint8_t> iv(ciphertext.begin(), ciphertext.begin() + 16);
+        std::vector<uint8_t> actual_ciphertext(ciphertext.begin() + 16, ciphertext.end());
+
+        // Initialize AES-256-CBC decryption
+        safeheron::ecies::AES aes(256);
+        std::string key_str(key.begin(), key.end());
+        std::string iv_str(iv.begin(), iv.end());
+
+        if (!aes.initKey_CBC(key_str, iv_str)) {
+            ERROR("Failed to initialize AES key for decryption");
+            throw std::runtime_error("Failed to initialize AES key for decryption");
+        }
+
+        std::string ciphertext_str(actual_ciphertext.begin(), actual_ciphertext.end());
+        std::string plaintext;
+
+        if (!aes.decrypt(ciphertext_str, plaintext)) {
+            ERROR("AES decryption failed");
+            throw std::runtime_error("AES decryption failed");
+        }
+
+        INFO_OUTPUT_CONSOLE("--->decrypt_with_aes_key: %s\n", plaintext.c_str());
+        return plaintext;
+    } catch (const std::exception &e) {
+        ERROR("Exception during AES decryption: %s", e.what());
+        throw;
+    }
+}
+
 int EncryptTextTask::execute(const std::string &request_id, const std::string &request, std::string &reply,
                              std::string &error_msg) {
     int ret = 0;
@@ -174,7 +220,22 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
         return TEE_ERROR_INVALID_PARAMETER;
     }
 
-    std::string private_key_hex = req_root["private_key_hex"].asString();
+    // Load encrypted private key and AES key from request JSON fields
+    std::string encrypted_private_key_hex = req_root["encrypted_private_key_hex"].asString();
+    std::string aes_key_hex = req_root["aes_key_hex"].asString();
+
+    // Decode hex strings to byte vectors
+    std::vector<uint8_t> encrypted_private_key = safeheron::encode::hex::DecodeFromHex(encrypted_private_key_hex);
+    std::vector<uint8_t> aes_key = safeheron::encode::hex::DecodeFromHex(aes_key_hex);
+
+    // Decrypt the private key using the AES key
+    std::string decrypted_private_key_str = decrypt_with_aes_key(aes_key, encrypted_private_key);
+    std::vector<uint8_t> decrypted_private_key_bytes(decrypted_private_key_str.begin(), decrypted_private_key_str.end());
+
+    // Convert decrypted private key bytes to BN
+    BN local_private_key;
+    local_private_key.FromBytesBE(decrypted_private_key_bytes.data(), decrypted_private_key_bytes.size());
+
     std::string remote_public_key_hex = req_root["remote_public_key_hex"].asString();
     std::string plain_text = req_root["plain_text"].asString();
     std::string signature = req_root["signature"].asString();
@@ -197,9 +258,6 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_INVALID_PARAMETER;
     }
-
-    BN local_private_key;
-    local_private_key = local_private_key.FromHexStr(private_key_hex);
 
     auto result = perform_ecdh_and_encrypt(local_private_key, plain_text, remote_public_key_hex);
     std::string encrypted_aes_key = result.first;

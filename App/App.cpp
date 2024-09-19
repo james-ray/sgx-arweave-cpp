@@ -20,7 +20,8 @@ std::unique_ptr<listen_svr> g_httpServer = nullptr;
 std::string g_key_shard_generation_path;
 std::string g_key_shard_query_path;
 std::string g_combine_sigs_path;
-std::string g_private_key;
+std::string g_enc_private_key;
+std::string g_request_id;
 std::string g_sign_node_public_keys;
 std::string g_root_seed_query_path;
 std::string g_request_ids;
@@ -101,9 +102,14 @@ int SGX_CDECL main(int argc, char *argv[]) {
         INFO_OUTPUT_CONSOLE("Failed to read 'g_root_seed_query_path' from configuration file ./server.ini!");
         return -1;
     }
-    g_private_key = cfg.get_string("server", "private_key");
+    g_enc_private_key = cfg.get_string("server", "encrypted_private_key");
     if (g_private_key.length() == 0) {
-        INFO_OUTPUT_CONSOLE("Failed to read 'g_private_key' from configuration file ./server.ini!");
+        INFO_OUTPUT_CONSOLE("Failed to read 'g_enc_private_key' from configuration file ./server.ini!");
+        return -1;
+    }
+    g_request_id = cfg.get_string("server", "request_id");
+    if (g_private_key.length() == 0) {
+        INFO_OUTPUT_CONSOLE("Failed to read 'g_request_id' from configuration file ./server.ini!");
         return -1;
     }
     g_sign_node_public_keys = cfg.get_string("server", "sign_node_public_keys");

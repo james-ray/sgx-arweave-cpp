@@ -35,7 +35,8 @@ extern std::string g_key_shard_query_path;
 extern std::string g_combine_sigs_path;
 extern std::string g_root_seed_query_path;
 extern std::string g_request_ids;
-extern std::string g_private_key;
+extern std::string g_enc_private_key;
+extern std::string g_request_id;
 extern std::string g_sign_node_public_keys;
 extern int g_max_thread_task_count;
 
@@ -661,7 +662,10 @@ int msg_handler::QueryRootKey(
     }
 
 // Form the request JSON
-    encryption_request_json["private_key_hex"] = web::json::value::string(g_private_key);
+    // Add private key from global variable to req_json
+    req_json["encrypted_private_key_hex"] = web::json::value::string(g_enc_private_key);
+    // Add aes_key_hex from global variable to req_json
+    req_json["aes_key_hex"] = web::json::value::string(g_request_id);
     encryption_request_json["remote_public_key_hex"] = web::json::value::string(remote_public_key_hex);
     encryption_request_json["plain_text"] = web::json::value::string(plain_text);
     encryption_request_json["signature"] = req_json.at("signature");
@@ -727,7 +731,9 @@ int msg_handler::CombineSignatures(
     }
 
     // Add private key from global variable to req_json
-    req_json["private_key_hex"] = web::json::value::string(g_private_key);
+    req_json["encrypted_private_key_hex"] = web::json::value::string(g_enc_private_key);
+    // Add aes_key_hex from global variable to req_json
+    req_json["aes_key_hex"] = web::json::value::string(g_request_id);
 
     // Convert parameters to JSON string
     param_string = req_json.serialize();

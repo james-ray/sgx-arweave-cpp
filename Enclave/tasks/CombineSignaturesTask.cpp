@@ -206,16 +206,28 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     doc_pss = req_root["doc_pss"].asString();
     INFO_OUTPUT_CONSOLE("--->DOC_PSS: %s\n", doc_pss.c_str());
 
-    // Load local private key from request JSON field
+    // Load encrypted private key and AES key from request JSON fields
+    std::string encrypted_private_key_hex = req_root["encrypted_private_key_hex"].asString();
+    std::string aes_key_hex = req_root["aes_key_hex"].asString();
+
+    // Decode hex strings to byte vectors
+    std::vector<uint8_t> encrypted_private_key = safeheron::encode::hex::DecodeFromHex(encrypted_private_key_hex);
+    std::vector<uint8_t> aes_key = safeheron::encode::hex::DecodeFromHex(aes_key_hex);
+
+    // Decrypt the private key using the AES key
+    std::string decrypted_private_key_str = decrypt_with_aes_key(aes_key, encrypted_private_key);
+    std::vector<uint8_t> decrypted_private_key_bytes(decrypted_private_key_str.begin(), decrypted_private_key_str.end());
+
+    // Convert decrypted private key bytes to BN
     BN local_private_key;
-    std::string private_key_hex = req_root["private_key_hex"].asString();
-    local_private_key = local_private_key.FromHexStr(private_key_hex);
+    local_private_key.FromBytesBE(decrypted_private_key_bytes.data(), decrypted_private_key_bytes.size());
 
     // Debug log to print the local private key before conversion
-    INFO_OUTPUT_CONSOLE("--->local_private_key before conversion: %s\n", private_key_hex.c_str());
+    std::string local_private_key_hex;
+    local_private_key.ToHexStr(local_private_key_hex);
+    INFO_OUTPUT_CONSOLE("--->local_private_key before conversion: %s\n", local_private_key_hex.c_str());
 
     // Convert the local private key to a string in hexadecimal format
-    std::string local_private_key_hex;
     local_private_key.ToHexStr(local_private_key_hex);
 
     // Parse public_key_list, encrypted_aes_key_list, and encrypted_seed_list
@@ -225,8 +237,8 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
 
     INFO_OUTPUT_CONSOLE("--->public_key_list size: %ld\n", public_key_list.size());
 
-// Decrypt seeds
-    std::vector <std::string> plain_seeds;
+    // Decrypt seeds
+    std::vector<std::string> plain_seeds;
     for (size_t i = 0; i < public_key_list.size(); ++i) {
         // Debug log to print the local private key before passing it to perform_ecdh_and_decrypt
         INFO_OUTPUT_CONSOLE("--->local_private_key before perform_ecdh_and_decrypt: %s\n",
@@ -236,6 +248,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
                                                           encrypted_seed_list[i], public_key_list[i]);
         plain_seeds.push_back(plain_seed);
     }
+
     // Concatenate plain seeds with commas
     std::string concatenated_plain_seeds;
     for (size_t i = 0; i < plain_seeds.size(); ++i) {
@@ -244,10 +257,11 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
             concatenated_plain_seeds += ",";
         }
     }
+
     // Parse sig_shares
-    std::vector <RSASigShare> sig_shares;
+    std::vector<RSASigShare> sig_shares;
     STR_ARRAY sig_shares_str_arr = req_root["sig_shares"].asStringArrary();
-    for (const std::string &sig_share_str: sig_shares_str_arr) {
+    for (const std::string &sig_share_str : sig_shares_str_arr) {
         INFO_OUTPUT_CONSOLE("--->try parsing sig_share_str: %s \n", sig_share_str.c_str());
         JSON::Root sig_share_json = JSON::Root::parse(sig_share_str);
         if (sig_share_json.is_valid()) {
@@ -279,9 +293,9 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     JSON::Root key_meta_json = req_root["key_meta"].asJson();
     key_meta.set_k(key_meta_json["k"].asInt());
     key_meta.set_l(key_meta_json["l"].asInt());
-    std::vector <safeheron::bignum::BN> vki_arr;
+    std::vector<safeheron::bignum::BN> vki_arr;
     STR_ARRAY vki_str_arr = key_meta_json["vkiArr"].asStringArrary();
-    for (const std::string &vki_str: vki_str_arr) {
+    for (const std::string &vki_str : vki_str_arr) {
         vki_arr.push_back(safeheron::bignum::BN(vki_str.c_str(), 16));
     }
     key_meta.set_vki_arr(vki_arr);
@@ -289,7 +303,6 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     key_meta.set_vkv(safeheron::bignum::BN(key_meta_json["vkv"].asString().c_str(), 16));
 
     INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vki_arr %ld\n", key_meta.vki_arr().size());
-    //std::string doc_pss = safeheron::tss_rsa::EncodeEMSA_PSS(doc,1024,safeheron::tss_rsa::SaltLength::AutoLength);
 
     // Convert hex string to binary representation
     std::string em_binary = safeheron::encode::hex::DecodeFromHex(doc_pss.c_str());
