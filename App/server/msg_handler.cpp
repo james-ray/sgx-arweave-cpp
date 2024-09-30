@@ -663,9 +663,9 @@ int msg_handler::QueryRootKey(
 
     // Form the request JSON
     // Add private key from global variable to req_json
-    req_json["encrypted_private_key_hex"] = web::json::value::string(g_enc_private_key);
+    encryption_request_json["encrypted_private_key_hex"] = web::json::value::string(g_enc_private_key);
     // Add aes_key_hex from global variable to req_json
-    req_json["aes_key_hex"] = web::json::value::string(g_request_id);
+    encryption_request_json["aes_key_hex"] = web::json::value::string(g_request_id);
     encryption_request_json["remote_public_key_hex"] = web::json::value::string(remote_public_key_hex);
     encryption_request_json["plain_text"] = web::json::value::string(plain_text);
     encryption_request_json["signature"] = req_json.at("signature");
