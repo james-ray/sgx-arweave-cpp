@@ -227,7 +227,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     //std::string decrypted_private_key_hex = safeheron::encode::hex::EncodeToHex(decrypted_private_key_bytes.data(), decrypted_private_key_bytes.size());
     //INFO_OUTPUT_CONSOLE("--->decrypted_private_key_bytes: %s\n", decrypted_private_key_hex.c_str());
 
-// Convert decrypted private key bytes to BN
+    // Convert decrypted private key bytes to BN
     BN local_private_key;
     local_private_key = local_private_key.FromBytesBE(decrypted_private_key_bytes.data(),
                                                       decrypted_private_key_bytes.size());

@@ -237,6 +237,10 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
     std::vector <uint8_t> decrypted_private_key_bytes(decrypted_private_key_str.begin(),
                                                       decrypted_private_key_str.end());
 
+    // Debug log to print the decrypted private key bytes in hexadecimal form
+    //std::string decrypted_private_key_hex = safeheron::encode::hex::EncodeToHex(decrypted_private_key_bytes.data(), decrypted_private_key_bytes.size());
+    //INFO_OUTPUT_CONSOLE("--->decrypted_private_key_bytes: %s\n", decrypted_private_key_hex.c_str());
+
     // Convert decrypted private key bytes to BN
     BN local_private_key;
     local_private_key = local_private_key.FromBytesBE(decrypted_private_key_bytes.data(),

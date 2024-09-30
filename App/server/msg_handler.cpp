@@ -661,7 +661,7 @@ int msg_handler::QueryRootKey(
         goto _exit2;
     }
 
-// Form the request JSON
+    // Form the request JSON
     // Add private key from global variable to req_json
     req_json["encrypted_private_key_hex"] = web::json::value::string(g_enc_private_key);
     // Add aes_key_hex from global variable to req_json
