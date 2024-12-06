@@ -58,19 +58,19 @@ CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std::v
     // Debug log to print the private key
     std::string private_key_hex;
     private_key.ToHexStr(private_key_hex);
-    INFO_OUTPUT_CONSOLE("--->private_key: %s\n", private_key_hex.c_str());
+    //INFO_OUTPUT_CONSOLE("--->private_key: %s\n", private_key_hex.c_str());
 
     // Compute the shared secret using ECC multiplication
     CurvePoint shared_secret_point = remote_public_key;
     std::string shared_secret_point_before_hex;
     shared_secret_point.x().ToHexStr(shared_secret_point_before_hex);
-    INFO_OUTPUT_CONSOLE("--->shared_secret_point before multiplication: %s\n", shared_secret_point_before_hex.c_str());
+    //INFO_OUTPUT_CONSOLE("--->shared_secret_point before multiplication: %s\n", shared_secret_point_before_hex.c_str());
 
     shared_secret_point *= private_key;
 
     std::string shared_secret_point_after_hex;
     shared_secret_point.x().ToHexStr(shared_secret_point_after_hex);
-    INFO_OUTPUT_CONSOLE("--->shared_secret_point after multiplication: %s\n", shared_secret_point_after_hex.c_str());
+    //INFO_OUTPUT_CONSOLE("--->shared_secret_point after multiplication: %s\n", shared_secret_point_after_hex.c_str());
 
     // Convert the shared secret point to a BN
     BN shared_secret = shared_secret_point.x();
@@ -80,7 +80,7 @@ CombineSignaturesTask::compute_shared_secret(const BN &private_key, const std::v
     shared_secret.ToHexStr(shared_secret_hex);
 
     // Use INFO_OUTPUT_CONSOLE to debug print the shared secret
-    INFO_OUTPUT_CONSOLE("--->shared_secret: %s\n", shared_secret_hex.c_str());
+    //INFO_OUTPUT_CONSOLE("--->shared_secret: %s\n", shared_secret_hex.c_str());
 
     return shared_secret;
 }
@@ -91,7 +91,7 @@ CombineSignaturesTask::decrypt_with_aes_key(const std::vector <uint8_t> &key, co
 
     // Debug log to print the key
     std::string key_hex = safeheron::encode::hex::EncodeToHex(key.data(), key.size());
-    INFO_OUTPUT_CONSOLE("--->AES key: %s\n", key_hex.c_str());
+    //INFO_OUTPUT_CONSOLE("--->AES key: %s\n", key_hex.c_str());
 
     // Debug log to print the ciphertext
     std::string ciphertext_hex = safeheron::encode::hex::EncodeToHex(ciphertext.data(), ciphertext.size());
@@ -124,7 +124,7 @@ CombineSignaturesTask::decrypt_with_aes_key(const std::vector <uint8_t> &key, co
             throw std::runtime_error("AES decryption failed");
         }
 
-        INFO_OUTPUT_CONSOLE("--->decrypt_with_aes_key: %s\n", plaintext.c_str());
+        //INFO_OUTPUT_CONSOLE("--->decrypt_with_aes_key: %s\n", plaintext.c_str());
         return plaintext;
     } catch (const std::exception &e) {
         ERROR("Exception during AES decryption: %s", e.what());
@@ -140,7 +140,7 @@ std::string CombineSignaturesTask::perform_ecdh_and_decrypt(const BN &local_priv
     // Debug log to print the private key
     std::string private_key_hex;
     local_private_key.ToHexStr(private_key_hex);
-    INFO_OUTPUT_CONSOLE("--->in perform_ecdh_and_decrypt, private_key: %s\n", private_key_hex.c_str());
+    //INFO_OUTPUT_CONSOLE("--->in perform_ecdh_and_decrypt, private_key: %s\n", private_key_hex.c_str());
 
     // Decode base64 inputs
     std::string encrypted_aes_key_str = safeheron::encode::base64::DecodeFromBase64(encrypted_aes_key_base64);
@@ -269,7 +269,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     std::vector <RSASigShare> sig_shares;
     STR_ARRAY sig_shares_str_arr = req_root["sig_shares"].asStringArrary();
     for (const std::string &sig_share_str: sig_shares_str_arr) {
-        INFO_OUTPUT_CONSOLE("--->try parsing sig_share_str: %s \n", sig_share_str.c_str());
+        //INFO_OUTPUT_CONSOLE("--->try parsing sig_share_str: %s \n", sig_share_str.c_str());
         JSON::Root sig_share_json = JSON::Root::parse(sig_share_str);
         if (sig_share_json.is_valid()) {
             RSASigShare sig_share;
@@ -309,7 +309,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     key_meta.set_vku(safeheron::bignum::BN(key_meta_json["vku"].asString().c_str(), 16));
     key_meta.set_vkv(safeheron::bignum::BN(key_meta_json["vkv"].asString().c_str(), 16));
 
-    INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vki_arr %ld\n", key_meta.vki_arr().size());
+    //INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: key_meta.vki_arr %ld\n", key_meta.vki_arr().size());
 
     // Convert hex string to binary representation
     std::string em_binary = safeheron::encode::hex::DecodeFromHex(doc_pss.c_str());
@@ -319,7 +319,7 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_COMBINE_SIGNATURE_FAILED;
     }
-    INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: doc_pss1 %s\n", doc_pss.c_str());
+    //INFO_OUTPUT_CONSOLE("--->before call CombineSignatures: doc_pss1 %s\n", doc_pss.c_str());
     if (!safeheron::tss_rsa::CombineSignatures(em_binary, sig_shares, public_key, key_meta, out_sig)) {
         error_msg = format_msg("Request ID: %s, CombineSignature failed!", request_id.c_str());
         ERROR("%s", error_msg.c_str());

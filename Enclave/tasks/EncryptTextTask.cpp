@@ -90,7 +90,7 @@ EncryptTextTask::perform_ecdh_and_encrypt(const BN &local_private_key, const std
     // Print the random number
     std::string rand_bn_str;
     rand_bn.ToHexStr(rand_bn_str);
-    INFO_OUTPUT_CONSOLE("Random Number: %s\n", rand_bn_str.c_str());
+    //INFO_OUTPUT_CONSOLE("Random Number: %s\n", rand_bn_str.c_str());
 
     // Encrypt the plaintext using the random AES key
     std::vector <uint8_t> plaintext_bytes(plaintext.begin(), plaintext.end());
@@ -161,7 +161,7 @@ EncryptTextTask::decrypt_with_aes_key(const std::vector <uint8_t> &key, const st
 
     // Debug log to print the key
     std::string key_hex = safeheron::encode::hex::EncodeToHex(key.data(), key.size());
-    INFO_OUTPUT_CONSOLE("--->AES key: %s\n", key_hex.c_str());
+    //INFO_OUTPUT_CONSOLE("--->AES key: %s\n", key_hex.c_str());
 
     // Debug log to print the ciphertext
     std::string ciphertext_hex = safeheron::encode::hex::EncodeToHex(ciphertext.data(), ciphertext.size());
@@ -194,7 +194,7 @@ EncryptTextTask::decrypt_with_aes_key(const std::vector <uint8_t> &key, const st
             throw std::runtime_error("AES decryption failed");
         }
 
-        INFO_OUTPUT_CONSOLE("--->decrypt_with_aes_key: %s\n", plaintext.c_str());
+        //INFO_OUTPUT_CONSOLE("--->decrypt_with_aes_key: %s\n", plaintext.c_str());
         return plaintext;
     } catch (const std::exception &e) {
         ERROR("Exception during AES decryption: %s", e.what());
