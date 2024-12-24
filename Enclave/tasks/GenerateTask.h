@@ -18,9 +18,11 @@
 #include <crypto-tss-rsa/RSAKeyMeta.h>
 #include <crypto-tss-rsa/KeyGenParam.h>
 #include <crypto-encode/hex.h>
+#include <crypto-bn/bn.h>
 #include <string>
 #include <vector>
 
+using safeheron::bignum::BN;
 using safeheron::tss_rsa::RSAPrivateKeyShare;
 using safeheron::tss_rsa::RSAPublicKey;
 using safeheron::tss_rsa::RSAKeyMeta;
