@@ -112,14 +112,14 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
         result_json.erase("server_private_key");
         // Check if g_plain_seeds is an empty string
         if (g_private_key.empty()) {
-            ERROR("Request ID: %s, g_private_key is empty!", req_id.c_str());
-            resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_private_key is empty.");
+            ERROR("Request ID: %s, g_private_key is empty!", request_id.c_str());
+            reply_body = msg_handler::GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_private_key is empty.");
             ret = APP_ERROR_INVALID_PARAMETER;
             goto _exit;
         }
     }else{
-        ERROR("Request ID: %s, g_private_key not generated!", req_id.c_str());
-        resp_body = GetMessageReply(false, sgx_status, "ECALL raised an error!");
+        ERROR("Request ID: %s, g_private_key not generated!", request_id.c_str());
+        reply_body = msg_handler::GetMessageReply(false, sgx_status, "ECALL raised an error!");
         ret = sgx_status;
         goto _exit;
     }
@@ -127,14 +127,14 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
         g_public_key = result_json.at("server_public_key").as_string();
         // Check if g_public_key is an empty string
         if (g_public_key.empty()) {
-            ERROR("Request ID: %s, g_public_key is empty!", req_id.c_str());
-            resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_public_key is empty.");
+            ERROR("Request ID: %s, g_public_key is empty!", request_id.c_str());
+            reply_body = msg_handler::GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_public_key is empty.");
             ret = APP_ERROR_INVALID_PARAMETER;
             goto _exit;
         }
     }else{
-        ERROR("Request ID: %s, server_public_key not generated!", req_id.c_str());
-        resp_body = GetMessageReply(false, sgx_status, "ECALL raised an error!");
+        ERROR("Request ID: %s, server_public_key not generated!", request_id.c_str());
+        reply_body = msg_handler::GetMessageReply(false, sgx_status, "ECALL raised an error!");
         ret = sgx_status;
         goto _exit;
     }
@@ -694,14 +694,12 @@ int msg_handler::QueryRootKey(
         ERROR("Request ID: %s, g_private_key is empty!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INTERNAL_ERROR, "g_private_key is empty.");
         ret = APP_ERROR_INTERNAL_ERROR;
-        goto _exit;
+        goto _exit2;
     }
 
     // Form the request JSON
     // Add private key from global variable to req_json
     encryption_request_json["private_key_hex"] = web::json::value::string(g_private_key);
-    // Add aes_key_hex from global variable to req_json
-    encryption_request_json["aes_key_hex"] = web::json::value::string(g_request_id);
     encryption_request_json["remote_public_key_hex"] = web::json::value::string(remote_public_key_hex);
     encryption_request_json["plain_text"] = web::json::value::string(plain_text);
     encryption_request_json["signature"] = req_json.at("signature");

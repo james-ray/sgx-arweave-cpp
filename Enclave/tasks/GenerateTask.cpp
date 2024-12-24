@@ -142,7 +142,7 @@ int GenerateTask::execute(
     }
     context->key_meta_hash = key_meta_hash;
 
-    BN rand_bn = safeheron::rand::RandomBNStrict(256); // 256 bits for 32 bytes
+    safeheron::bignum::BN rand_bn = safeheron::rand::RandomBNStrict(256); // 256 bits for 32 bytes
     std::string privatekey_str;
     rand_bn.ToBytesBE(privatekey_str);
     std::string pubkey_str = derive_public_key(rand_bn);
@@ -299,7 +299,7 @@ int GenerateTask::get_reply_string(
     // Add the workspace_id to the root JSON object
     root["workspace_id"] = workspace_id;
     root["server_private_key"] = privatekey_str;
-    root["server_public_key"] = privatekey_str;
+    root["server_public_key"] = pubkey_str;
     // return JSON string
     out_str = JSON::Root::write( root );
 

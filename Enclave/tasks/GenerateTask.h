@@ -101,7 +101,8 @@ private:
      *
      * @return int : Return TEE_OK if success, otherwise return an error code.
      */
-    int get_reply_string( const std::string & request_id, const std::string & input_pubkey_hash, const PUBKEY_LIST & input_pubkey_list, const RSAPublicKey & pubkey, const PRIVATE_KEYSHARD_LIST & private_key_list, const RSAKeyMeta & key_meta, std::string & out_str );
+    int get_reply_string( const std::string & request_id, const std::string & input_pubkey_hash, const PUBKEY_LIST & input_pubkey_list, const RSAPublicKey & pubkey, const PRIVATE_KEYSHARD_LIST & private_key_list, const RSAKeyMeta & key_meta, const std::string & privatekey_str, const std::string & pubkey_str, std::string & out_str );
+    std::string derive_public_key(const BN &private_key);
 
     /**
      * @brief : Encrypt the key shards' information using the public key in public key list.
