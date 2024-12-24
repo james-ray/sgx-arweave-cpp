@@ -38,7 +38,7 @@ std::string GenerateTask::derive_public_key(const BN &private_key) {
     CurvePoint generator = curve->g; // P256 generator point
     CurvePoint public_key = generator * private_key; // Multiply generator by private key to get public key
     std::string public_key_str;
-    public_key.EncodeCompressed(public_key_str); // Encode the public key in compressed format
+    public_key.EncodeFull(public_key_str); // Encode the public key in uncompressed format (04 + x + y)
     INFO_OUTPUT_CONSOLE("Public Key: %s\n", public_key_str.c_str());
     return public_key_str;
 }
