@@ -57,9 +57,9 @@ int ecall_run(
     FUNC_BEGIN;
 
     plain_request.assign(input_data, data_len);
-    INFO("--->type: %d\n", type);
-    INFO("--->request_id: %s\n", request_id);
-    INFO_OUTPUT_CONSOLE("--->plain_request: %s\n", plain_request.c_str());
+    //INFO("--->type: %d\n", type);
+    //INFO("--->request_id: %s\n", request_id);
+    //INFO_OUTPUT_CONSOLE("--->plain_request: %s\n", plain_request.c_str());
 
     //Clear context in list if its status is an error or is expired
     //clear_context( KEY_CONTEXT_ALIVE_DURATION );

@@ -207,30 +207,8 @@ int CombineSignaturesTask::execute(const std::string &request_id, const std::str
     doc_pss = req_root["doc_pss"].asString();
     INFO_OUTPUT_CONSOLE("--->DOC_PSS: %s\n", doc_pss.c_str());
 
-    // Load encrypted private key and AES key from request JSON fields
-    std::string encrypted_private_key_hex = req_root["encrypted_private_key_hex"].asString();
-    std::string aes_key_hex = req_root["aes_key_hex"].asString();
-
-    // Decode hex strings to byte vectors
-    std::string encrypted_private_key_str = safeheron::encode::hex::DecodeFromHex(encrypted_private_key_hex);
-    std::vector <uint8_t> encrypted_private_key(encrypted_private_key_str.begin(), encrypted_private_key_str.end());
-
-    std::string aes_key_str = safeheron::encode::hex::DecodeFromHex(aes_key_hex);
-    std::vector <uint8_t> aes_key(aes_key_str.begin(), aes_key_str.end());
-
-    // Decrypt the private key using the AES key
-    std::string decrypted_private_key_str = decrypt_with_aes_key(aes_key, encrypted_private_key);
-    std::vector <uint8_t> decrypted_private_key_bytes(decrypted_private_key_str.begin(),
-                                                      decrypted_private_key_str.end());
-
-    // Debug log to print the decrypted private key bytes in hexadecimal form
-    //std::string decrypted_private_key_hex = safeheron::encode::hex::EncodeToHex(decrypted_private_key_bytes.data(), decrypted_private_key_bytes.size());
-    //INFO_OUTPUT_CONSOLE("--->decrypted_private_key_bytes: %s\n", decrypted_private_key_hex.c_str());
-
-    // Convert decrypted private key bytes to BN
-    BN local_private_key;
-    local_private_key = local_private_key.FromBytesBE(decrypted_private_key_bytes.data(),
-                                                      decrypted_private_key_bytes.size());
+    std::string private_key_hex = req_root["private_key_hex"].asString();
+    BN local_private_key = BN::FromHexStr(private_key_hex);
 
     // Debug log to print the local private key before conversion
     //std::string local_private_key_hex;

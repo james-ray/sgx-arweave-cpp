@@ -45,10 +45,12 @@ BN EncryptTextTask::compute_shared_secret(const BN &private_key, const std::vect
 
 std::vector <uint8_t>
 EncryptTextTask::encrypt_with_aes_key(const std::vector <uint8_t> &key, const std::vector <uint8_t> &plaintext) {
-    std::vector <uint8_t> iv(16, 0);
-    std::string fixed_iv = "sign_node!@#";
-    std::copy(fixed_iv.begin(), fixed_iv.end(), iv.begin());
-    //std::generate(iv.begin(), iv.end(), std::rand);
+    std::vector <uint8_t> iv(16);
+    BN rand_bn = safeheron::rand::RandomBNStrict(128); // 128 bits for 16 bytes
+    std::string temp_str;
+    rand_bn.ToBytesBE(temp_str);
+    std::copy(temp_str.begin(), temp_str.begin() + 16, iv.begin());
+
     safeheron::ecies::AES aes(256);
     std::string key_str(key.begin(), key.end());
     std::string iv_str(iv.begin(), iv.end());
@@ -88,8 +90,8 @@ EncryptTextTask::perform_ecdh_and_encrypt(const BN &local_private_key, const std
     rand_bn.ToBytesBE(temp_str);
     std::copy(temp_str.begin(), temp_str.begin() + 32, aes_key.begin());
     // Print the random number
-    std::string rand_bn_str;
-    rand_bn.ToHexStr(rand_bn_str);
+//    std::string rand_bn_str;
+//    rand_bn.ToHexStr(rand_bn_str);
     //INFO_OUTPUT_CONSOLE("Random Number: %s\n", rand_bn_str.c_str());
 
     // Encrypt the plaintext using the random AES key
@@ -221,30 +223,8 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
         return TEE_ERROR_INVALID_PARAMETER;
     }
 
-    // Load encrypted private key and AES key from request JSON fields
-    std::string encrypted_private_key_hex = req_root["encrypted_private_key_hex"].asString();
-    std::string aes_key_hex = req_root["aes_key_hex"].asString();
-
-    // Decode hex strings to byte vectors
-    std::string encrypted_private_key_str = safeheron::encode::hex::DecodeFromHex(encrypted_private_key_hex);
-    std::vector <uint8_t> encrypted_private_key(encrypted_private_key_str.begin(), encrypted_private_key_str.end());
-
-    std::string aes_key_str = safeheron::encode::hex::DecodeFromHex(aes_key_hex);
-    std::vector <uint8_t> aes_key(aes_key_str.begin(), aes_key_str.end());
-
-    // Decrypt the private key using the AES key
-    std::string decrypted_private_key_str = decrypt_with_aes_key(aes_key, encrypted_private_key);
-    std::vector <uint8_t> decrypted_private_key_bytes(decrypted_private_key_str.begin(),
-                                                      decrypted_private_key_str.end());
-
-    // Debug log to print the decrypted private key bytes in hexadecimal form
-    //std::string decrypted_private_key_hex = safeheron::encode::hex::EncodeToHex(decrypted_private_key_bytes.data(), decrypted_private_key_bytes.size());
-    //INFO_OUTPUT_CONSOLE("--->decrypted_private_key_bytes: %s\n", decrypted_private_key_hex.c_str());
-
-    // Convert decrypted private key bytes to BN
-    BN local_private_key;
-    local_private_key = local_private_key.FromBytesBE(decrypted_private_key_bytes.data(),
-                                                      decrypted_private_key_bytes.size());
+    std::string private_key_hex = req_root["private_key_hex"].asString();
+    BN local_private_key = BN::FromHexStr(private_key_hex);
 
     std::string remote_public_key_hex = req_root["remote_public_key_hex"].asString();
     std::string plain_text = req_root["plain_text"].asString();

@@ -18,6 +18,7 @@
 #define APP_ERROR_INVALID_WEBHOOK_URL       APP_ERROR_BASE + 0x8
 #define APP_ERROR_SERVER_IS_BUSY            APP_ERROR_BASE + 0x9
 #define APP_ERROR_FAILED_TO_START_THREAD    APP_ERROR_BASE + 0xA
+#define APP_ERROR_INTERNAL_ERROR    APP_ERROR_BASE + 0xB
 
 
 typedef struct _ra_errlist_t {

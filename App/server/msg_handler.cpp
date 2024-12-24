@@ -35,8 +35,8 @@ extern std::string g_key_shard_query_path;
 extern std::string g_combine_sigs_path;
 extern std::string g_root_seed_query_path;
 extern std::string g_request_ids;
-extern std::string g_enc_private_key;
-extern std::string g_request_id;
+extern std::string g_private_key;
+extern std::string g_public_key;
 extern std::string g_sign_node_public_keys;
 extern int g_max_thread_task_count;
 
@@ -107,7 +107,37 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
         reply_body = msg_handler::GetMessageReply(false, ret, "Failed to create enclave report!");
         goto _exit;
     }
-
+    if (result_json.has_field("server_private_key")) {
+        g_private_key = result_json.at("server_private_key").as_string();
+        result_json.erase("server_private_key");
+        // Check if g_plain_seeds is an empty string
+        if (g_private_key.empty()) {
+            ERROR("Request ID: %s, g_private_key is empty!", req_id.c_str());
+            resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_private_key is empty.");
+            ret = APP_ERROR_INVALID_PARAMETER;
+            goto _exit;
+        }
+    }else{
+        ERROR("Request ID: %s, g_private_key not generated!", req_id.c_str());
+        resp_body = GetMessageReply(false, sgx_status, "ECALL raised an error!");
+        ret = sgx_status;
+        goto _exit;
+    }
+    if (result_json.has_field("server_public_key")) {
+        g_public_key = result_json.at("server_public_key").as_string();
+        // Check if g_public_key is an empty string
+        if (g_public_key.empty()) {
+            ERROR("Request ID: %s, g_public_key is empty!", req_id.c_str());
+            resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_public_key is empty.");
+            ret = APP_ERROR_INVALID_PARAMETER;
+            goto _exit;
+        }
+    }else{
+        ERROR("Request ID: %s, server_public_key not generated!", req_id.c_str());
+        resp_body = GetMessageReply(false, sgx_status, "ECALL raised an error!");
+        ret = sgx_status;
+        goto _exit;
+    }
     INFO_OUTPUT_CONSOLE("Request ID: %s, generate remote attestation report successfully.", request_id.c_str());
 
     // Add remote attestation report to JSON object
@@ -660,10 +690,16 @@ int msg_handler::QueryRootKey(
         ret = -1;
         goto _exit2;
     }
+    if (g_private_key.empty()) {
+        ERROR("Request ID: %s, g_private_key is empty!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INTERNAL_ERROR, "g_private_key is empty.");
+        ret = APP_ERROR_INTERNAL_ERROR;
+        goto _exit;
+    }
 
     // Form the request JSON
     // Add private key from global variable to req_json
-    encryption_request_json["encrypted_private_key_hex"] = web::json::value::string(g_enc_private_key);
+    encryption_request_json["private_key_hex"] = web::json::value::string(g_private_key);
     // Add aes_key_hex from global variable to req_json
     encryption_request_json["aes_key_hex"] = web::json::value::string(g_request_id);
     encryption_request_json["remote_public_key_hex"] = web::json::value::string(remote_public_key_hex);
@@ -671,7 +707,6 @@ int msg_handler::QueryRootKey(
     encryption_request_json["signature"] = req_json.at("signature");
     encryption_request_json["timestamp"] = web::json::value::string(timestamp);
     encryption_request_json["msg_digest"] = web::json::value::string(msg_digest);
-    encryption_request_json["request_id"] = web::json::value::string(request_id);
     param_string = encryption_request_json.serialize();
 
     // Call ECALL to perform encryption in TEE
@@ -729,11 +764,14 @@ int msg_handler::CombineSignatures(
         ret = -1;
         goto _exit;
     }
-
+    if (g_private_key.empty()) {
+        ERROR("Request ID: %s, g_private_key is empty!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INTERNAL_ERROR, "g_private_key is empty.");
+        ret = APP_ERROR_INTERNAL_ERROR;
+        goto _exit;
+    }
     // Add private key from global variable to req_json
-    req_json["encrypted_private_key_hex"] = web::json::value::string(g_enc_private_key);
-    // Add aes_key_hex from global variable to req_json
-    req_json["aes_key_hex"] = web::json::value::string(g_request_id);
+    req_json["private_key_hex"] = web::json::value::string(g_private_key);
 
     // Convert parameters to JSON string
     param_string = req_json.serialize();

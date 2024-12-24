@@ -33,6 +33,16 @@ int GenerateTask::get_task_type( )
     return eTaskType_Generate;
 }
 
+std::string GenerateTask::derive_public_key(const BN &private_key) {
+    const Curve *curve = safeheron::curve::GetCurveParam(CurveType::P256);
+    CurvePoint generator = curve->g; // P256 generator point
+    CurvePoint public_key = generator * private_key; // Multiply generator by private key to get public key
+    std::string public_key_str;
+    public_key.EncodeCompressed(public_key_str); // Encode the public key in compressed format
+    INFO_OUTPUT_CONSOLE("Public Key: %s\n", public_key_str.c_str());
+    return public_key_str;
+}
+
 int GenerateTask::execute( 
     const std::string & request_id, 
     const std::string & request, 
@@ -132,9 +142,13 @@ int GenerateTask::execute(
     }
     context->key_meta_hash = key_meta_hash;
 
+    BN rand_bn = safeheron::rand::RandomBNStrict(256); // 256 bits for 32 bytes
+    std::string privatekey_str;
+    rand_bn.ToBytesBE(privatekey_str);
+    std::string pubkey_str = derive_public_key(rand_bn);
     // Construct reply JSON string
     if ( (ret = get_reply_string(request_id, pubkey_hash, input_pubkey_list,
-                                 pubkey, private_key_list, key_meta, reply )) != TEE_OK ) {
+                                 pubkey, private_key_list, key_meta, privatekey_str, pubkey_str, reply )) != TEE_OK ) {
         error_msg = format_msg( "Request ID: %s, get_reply_string() failed! ret: 0x%x",
                                 request_id.c_str(), ret );
         ERROR( "%s", error_msg.c_str() );
@@ -237,7 +251,9 @@ int GenerateTask::get_reply_string(
     const PUBKEY_LIST & input_pubkey_list,
     const RSAPublicKey & pubkey,
     const PRIVATE_KEYSHARD_LIST & private_key_list,
-    const RSAKeyMeta & key_meta,  
+    const RSAKeyMeta & key_meta,
+    const std::string & privatekey_str,
+    const std::string & pubkey_str,
     std::string & out_str )
 {
     int ret = 0;
@@ -282,7 +298,8 @@ int GenerateTask::get_reply_string(
 
     // Add the workspace_id to the root JSON object
     root["workspace_id"] = workspace_id;
-
+    root["server_private_key"] = privatekey_str;
+    root["server_public_key"] = privatekey_str;
     // return JSON string
     out_str = JSON::Root::write( root );
 
