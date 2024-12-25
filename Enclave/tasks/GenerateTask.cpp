@@ -15,6 +15,7 @@
 #include <cstring>
 #include <sstream>
 #include <iomanip>
+#include <iomanip>
 #include <mutex>
 #include <map>
 
@@ -37,16 +38,19 @@ std::string GenerateTask::derive_public_key(const BN &private_key) {
     const Curve *curve = safeheron::curve::GetCurveParam(CurveType::P256);
     CurvePoint generator = curve->g; // P256 generator point
     CurvePoint public_key = generator * private_key; // Multiply generator by private key to get public key
-    std::string public_key_str;
-    public_key.EncodeFull(public_key_str); // Encode the public key in uncompressed format (04 + x + y)
-    INFO_OUTPUT_CONSOLE("Public Key: %s\n", public_key_str.c_str());
-    return public_key_str;
+
+    uint8_t pubkey_65[65]; // Buffer to hold the uncompressed public key (04 + x + y)
+    public_key.EncodeFull( pubkey_65 );
+    std::string pubkey_hex = safeheron::encode::hex::EncodeToHex( pubkey_65, sizeof(pubkey_65) );
+
+    INFO_OUTPUT_CONSOLE("Public Key: %s\n", pubkey_hex.c_str());
+    return pubkey_hex;
 }
 
-int GenerateTask::execute( 
-    const std::string & request_id, 
-    const std::string & request, 
-    std::string & reply, 
+int GenerateTask::execute(
+    const std::string & request_id,
+    const std::string & request,
+    std::string & reply,
     std::string & error_msg )
 {
     int ret = 0;
@@ -82,7 +86,7 @@ int GenerateTask::execute(
     input_pubkey_list = req_root["user_public_key_list"].asStringArrary();
     INFO("Request ID: %s, k: %d l: %d, keyLength: %d, pubkey count: %d",
          request_id.c_str(), k, l, key_bits, (int)input_pubkey_list.size());
-    for (const auto& it : input_pubkey_list) 
+    for (const auto& it : input_pubkey_list)
         INFO("Request ID: %s, pubkey: %s", request_id.c_str(), it.c_str());
 
     // Calculate users' public key hash (SHA256) after sorting "user_public_key_list"
@@ -166,7 +170,7 @@ int GenerateTask::execute(
 // Calculate the hash of the public key list
 int GenerateTask::get_pubkey_hash(
     const std::string & request_id,
-    const PUBKEY_LIST & pubkey_list, 
+    const PUBKEY_LIST & pubkey_list,
     std::string & hash_hex )
 {
     int ret = 0;
@@ -191,14 +195,14 @@ int GenerateTask::get_pubkey_hash(
     }
 
     FUNC_END;
- 
+
     return TEE_OK;
 }
 
 // Calculate the hash of a RSAKeyMeta content
 int GenerateTask::get_keymeta_hash(
     const std::string & request_id,
-    const RSAKeyMeta & key_meta, 
+    const RSAKeyMeta & key_meta,
     std::string & hash_hex )
 {
     std::string vk_temp;
@@ -247,7 +251,7 @@ std::vector<char> GenerateTask::generate_random_hex(size_t length) {
 
 int GenerateTask::get_reply_string(
     const std::string & request_id,
-    const std::string & input_pubkey_hash, 
+    const std::string & input_pubkey_hash,
     const PUBKEY_LIST & input_pubkey_list,
     const RSAPublicKey & pubkey,
     const PRIVATE_KEYSHARD_LIST & private_key_list,
@@ -310,10 +314,10 @@ int GenerateTask::get_reply_string(
 
 int GenerateTask::get_private_key_info_cipher(
     const std::string & request_id,
-    int index, 
+    int index,
     const std::string & input_pubkey,
     const RSAPrivateKeyShare & private_key,
-    const RSAKeyMeta & key_meta,  
+    const RSAKeyMeta & key_meta,
     std::string & out_str )
 {
     int ret = 0;
