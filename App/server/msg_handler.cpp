@@ -94,23 +94,21 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
         reply_body = msg_handler::GetMessageReply(false, ret, result ? result : "");
         goto _exit;
     }
-    INFO_OUTPUT_CONSOLE("Request ID: %s, generate key shards successfully. result: %s", request_id.c_str(),result);
+    INFO_OUTPUT_CONSOLE("Request ID: %s, generate key shards successfully. result: %s", request_id.c_str(), result);
 
     // Get public key list hash in result
     result_json = json::value::parse(result);
     pubkey_list_hash = result_json.at(FIELD_NAME_PUBKEY_LIST_HASH).as_string();
-
-    // Generate enclave quote
-    if ((ret = msg_handler::GenerateEnclaveReport(request_id, pubkey_list_hash, enclave_report)) != 0) {
-        ERROR("Request ID: %s,  msg_handler::GenerateEnclaveReport() failed! pubkey_list_hash: %s, ret: %d",
-              request_id.c_str(), pubkey_list_hash.c_str(), ret);
-        reply_body = msg_handler::GetMessageReply(false, ret, "Failed to create enclave report!");
+    if (pubkey_list_hash.empty()) {
+        ERROR("Request ID: %s, pubkey_list_hash is empty!", request_id.c_str());
+        reply_body = msg_handler::GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "pubkey_list_hash is empty.");
+        ret = APP_ERROR_INVALID_PARAMETER;
         goto _exit;
     }
-    if (result_json.has_field("server_private_key")) {
+	if (result_json.has_field("server_private_key")) {
         g_private_key = result_json.at("server_private_key").as_string();
         result_json.erase("server_private_key");
-        // Check if g_plain_seeds is an empty string
+        // Check if g_private_key is an empty string
         if (g_private_key.empty()) {
             ERROR("Request ID: %s, g_private_key is empty!", request_id.c_str());
             reply_body = msg_handler::GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_private_key is empty.");
@@ -138,6 +136,14 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
         ret = sgx_status;
         goto _exit;
     }
+
+    // Generate enclave quote
+    if ((ret = msg_handler::GenerateEnclaveReport(request_id, pubkey_list_hash, enclave_report)) != 0) {
+        ERROR("Request ID: %s,  msg_handler::GenerateEnclaveReport() failed! pubkey_list_hash: %s, ret: %d",
+              request_id.c_str(), pubkey_list_hash.c_str(), ret);
+        reply_body = msg_handler::GetMessageReply(false, ret, "Failed to create enclave report!");
+        goto _exit;
+    }
     INFO_OUTPUT_CONSOLE("Request ID: %s, generate remote attestation report successfully.", request_id.c_str());
 
     // Add remote attestation report to JSON object
@@ -150,8 +156,6 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
 
     // OK
     ret = 0;
-
-    _exit:
     try {
         listen_svr::PostRequest(request_id, param->webhook_url_, reply_body).wait();
         ecall_set_generation_status(global_eid, &ret, request_id.c_str(), pubkey_list_hash.c_str(),
@@ -162,6 +166,9 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
         ecall_set_generation_status(global_eid, &ret, request_id.c_str(), pubkey_list_hash.c_str(), eKeyStatus_Error);
         ERROR("Request ID: %s Error exception: %s", request_id.c_str(), e.what());
     }
+
+    FUNC_END;
+	_exit:
     if (result) {
         free(result);
         result = nullptr;
@@ -170,9 +177,6 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
         delete param;
         param = nullptr;
     }
-
-    FUNC_END;
-
     return ret;
 }
 
