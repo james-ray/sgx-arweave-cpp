@@ -102,13 +102,15 @@ int GenerateTask::execute(
 
     // Check if there is a same public key list hash in context list
     // Return if there is, even if its status is finished!!!
-    std::lock_guard<std::mutex> lock( g_list_mutex );
+    /*
+	std::lock_guard<std::mutex> lock( g_list_mutex );
     if ( g_keyContext_list.count( pubkey_hash ) ) {
         error_msg = format_msg( "Request ID: %s, a same request is in queue!", request_id.c_str() );
         ERROR( "%s", error_msg.c_str() );
         return TEE_ERROR_REQUEST_IS_EXIST;
     }
     g_list_mutex.unlock();
+	*/
 
     // Construct a KeyShardContext object and add it into g_keyContext_list.
     if ( !(context = new KeyShardContext( k, l, key_bits )) ) {
