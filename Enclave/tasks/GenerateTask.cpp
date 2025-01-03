@@ -148,7 +148,7 @@ int GenerateTask::execute(
 
     safeheron::bignum::BN rand_bn = safeheron::rand::RandomBNStrict(256); // 256 bits for 32 bytes
     std::string privatekey_str;
-    rand_bn.ToBytesBE(privatekey_str);
+	rand_bn.ToHexStr(privatekey_str);
     std::string pubkey_str = derive_public_key(rand_bn);
     // Construct reply JSON string
     if ( (ret = get_reply_string(request_id, pubkey_hash, input_pubkey_list,
@@ -272,30 +272,31 @@ int GenerateTask::get_reply_string(
 
     // Add string "key_shard_pubkey" to JSON object root
     std::string pubkey_json_str;
-    pubkey.ToJsonString( pubkey_json_str );
-    JSON::Root pubkey_root = JSON::Root::parse( pubkey_json_str );
+    pubkey.ToJsonString(pubkey_json_str);
+    JSON::Root pubkey_root = JSON::Root::parse(pubkey_json_str);
     root["rsa_public_key"] = pubkey_root;
 
     // Add JSON list "key_shard_pkg" to JSON object root
-    for ( const auto& prikey : private_key_list ) {
+    for (const auto& prikey : private_key_list) {
         JSON::Root arrary_node;
         std::string keyInfo_cipher;
 
         // Encrypt the private key shard and key meta
-        if ( (ret = get_private_key_info_cipher(request_id, index + 1, input_pubkey_list[index],
-                                                prikey, key_meta, keyInfo_cipher)) != TEE_OK ) {
-            ERROR( "Request ID: %s, get_private_key_info_cipher() failed with index: %d!", request_id.c_str(), index );
+        if ((ret = get_private_key_info_cipher(request_id, index + 1, input_pubkey_list[index],
+                                               prikey, key_meta, keyInfo_cipher)) != TEE_OK) {
+            ERROR("Request ID: %s, get_private_key_info_cipher() failed with index: %d!", request_id.c_str(), index);
             return ret;
         }
 
         // Add the element to "key_shard_pkg"
         arrary_node["public_key"] = input_pubkey_list[index];
         arrary_node["encrypt_key_info"] = keyInfo_cipher;
-        pkg_array.push_back( arrary_node );
+        pkg_array.push_back(arrary_node);
 
         ++index;
     }
     root["key_shard_pkg"] = pkg_array;
+
     // Generate random hex bytes for workspace_id
     std::vector<char> workspace_id_vec = generate_random_hex(32); // 32 hex characters
     std::string workspace_id(workspace_id_vec.begin(), workspace_id_vec.end());
@@ -304,11 +305,12 @@ int GenerateTask::get_reply_string(
     root["workspace_id"] = workspace_id;
     root["server_private_key"] = privatekey_str;
     root["server_public_key"] = pubkey_str;
+
     // return JSON string
-    out_str = JSON::Root::write( root );
+    out_str = JSON::Root::write(root);
 
     FUNC_END;
-
+    //INFO_OUTPUT_CONSOLE("=====privatekey_str %s, pubkey_str %s, out_str: %s", privatekey_str.c_str(), pubkey_str.c_str(), out_str.c_str());
     return TEE_OK;
 }
 

@@ -94,7 +94,7 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
         reply_body = msg_handler::GetMessageReply(false, ret, result ? result : "");
         goto _exit;
     }
-    INFO_OUTPUT_CONSOLE("Request ID: %s, generate key shards successfully.", request_id.c_str());
+    INFO_OUTPUT_CONSOLE("Request ID: %s, generate key shards successfully. result: %s", request_id.c_str(),result);
 
     // Get public key list hash in result
     result_json = json::value::parse(result);
@@ -622,6 +622,8 @@ int msg_handler::QueryRootKey(
 
     try {
         req_json = web::json::value::parse(req_body);
+        // Print the req_json as a pretty-printed JSON structure
+		INFO_OUTPUT_CONSOLE("Request ID: %s, req_json (pretty): %s", req_id.c_str(), req_json.serialize().c_str());
     } catch (const std::exception &e) {
         ERROR("Request ID: %s, invalid input data!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "invalid input, please check your data.");
@@ -729,7 +731,7 @@ int msg_handler::QueryRootKey(
     }
 
     FUNC_END;
-
+	INFO_OUTPUT_CONSOLE("Request ID: %s, resp_body (pretty): %s", req_id.c_str(), resp_body.c_str());
     _exit2:
     if (result) {
         free(result);
