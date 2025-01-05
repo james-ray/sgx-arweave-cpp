@@ -148,10 +148,16 @@ int GenerateTask::execute(
     }
     context->key_meta_hash = key_meta_hash;
 
-    safeheron::bignum::BN rand_bn = safeheron::rand::RandomBNStrict(256); // 256 bits for 32 bytes
     std::string privatekey_str;
-	rand_bn.ToHexStr(privatekey_str);
-    std::string pubkey_str = derive_public_key(rand_bn);
+    std::string pubkey_str;
+    std::lock_guard<std::mutex> lock( g_list_mutex );
+    if ( g_keyContext_list.count( pubkey_hash )==0 ) {
+       	safeheron::bignum::BN rand_bn = safeheron::rand::RandomBNStrict(256); // 256 bits for 32 bytes
+		rand_bn.ToHexStr(privatekey_str);
+    	pubkey_str = derive_public_key(rand_bn);
+    }
+    g_list_mutex.unlock();
+
     // Construct reply JSON string
     if ( (ret = get_reply_string(request_id, pubkey_hash, input_pubkey_list,
                                  pubkey, private_key_list, key_meta, privatekey_str, pubkey_str, reply )) != TEE_OK ) {

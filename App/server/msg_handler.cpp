@@ -105,36 +105,41 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
         ret = APP_ERROR_INVALID_PARAMETER;
         goto _exit;
     }
-	if (result_json.has_field("server_private_key")) {
-        g_private_key = result_json.at("server_private_key").as_string();
-        result_json.erase("server_private_key");
-        // Check if g_private_key is an empty string
-        if (g_private_key.empty()) {
-            ERROR("Request ID: %s, g_private_key is empty!", request_id.c_str());
-            reply_body = msg_handler::GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_private_key is empty.");
-            ret = APP_ERROR_INVALID_PARAMETER;
-            goto _exit;
-        }
+
+    if (g_private_key.empty()) {
+		if (result_json.has_field("server_private_key")) {
+        	g_private_key = result_json.at("server_private_key").as_string();
+        	result_json.erase("server_private_key");
+        	// Check if g_private_key is an empty string
+        	if (g_private_key.empty()) {
+            	ERROR("Request ID: %s, g_private_key is empty!", request_id.c_str());
+            	reply_body = msg_handler::GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_private_key is empty.");
+            	ret = APP_ERROR_INVALID_PARAMETER;
+            	goto _exit;
+        	}
+    	}else{
+        	ERROR("Request ID: %s, g_private_key not generated!", request_id.c_str());
+        	reply_body = msg_handler::GetMessageReply(false, sgx_status, "ECALL raised an error!");
+        	ret = sgx_status;
+        	goto _exit;
+    	}
+    	if (result_json.has_field("server_public_key")) {
+        	g_public_key = result_json.at("server_public_key").as_string();
+        	// Check if g_public_key is an empty string
+        	if (g_public_key.empty()) {
+            	ERROR("Request ID: %s, g_public_key is empty!", request_id.c_str());
+            	reply_body = msg_handler::GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_public_key is empty.");
+            	ret = APP_ERROR_INVALID_PARAMETER;
+            	goto _exit;
+        	}
+    	}else{
+        	ERROR("Request ID: %s, server_public_key not generated!", request_id.c_str());
+        	reply_body = msg_handler::GetMessageReply(false, sgx_status, "ECALL raised an error!");
+        	ret = sgx_status;
+        	goto _exit;
+    	}
     }else{
-        ERROR("Request ID: %s, g_private_key not generated!", request_id.c_str());
-        reply_body = msg_handler::GetMessageReply(false, sgx_status, "ECALL raised an error!");
-        ret = sgx_status;
-        goto _exit;
-    }
-    if (result_json.has_field("server_public_key")) {
-        g_public_key = result_json.at("server_public_key").as_string();
-        // Check if g_public_key is an empty string
-        if (g_public_key.empty()) {
-            ERROR("Request ID: %s, g_public_key is empty!", request_id.c_str());
-            reply_body = msg_handler::GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_public_key is empty.");
-            ret = APP_ERROR_INVALID_PARAMETER;
-            goto _exit;
-        }
-    }else{
-        ERROR("Request ID: %s, server_public_key not generated!", request_id.c_str());
-        reply_body = msg_handler::GetMessageReply(false, sgx_status, "ECALL raised an error!");
-        ret = sgx_status;
-        goto _exit;
+      	result_json["server_public_key"] = json::value(g_public_key);
     }
 
     // Generate enclave quote
