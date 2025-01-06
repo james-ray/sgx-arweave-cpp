@@ -123,6 +123,7 @@ int GenerateTask::execute(
     } else{
     	INFO_OUTPUT_CONSOLE("GenerateTask has already generated before");
     }
+     g_list_mutex.unlock();
 	//INFO_OUTPUT_CONSOLE("GenerateTask privatekey_str %s \n", privatekey_str);
 
     // Construct a KeyShardContext object and add it into g_keyContext_list.
