@@ -165,6 +165,7 @@ int ecall_create_report(
         sgx_report_t *p_report) {
     int ret = 0;
     std::string key_meta_hash;
+    std::string server_pubkey;
     std::string pubkey_and_meta;
     std::string total_hash_hex;
     std::string total_hash;
@@ -181,11 +182,13 @@ int ecall_create_report(
         return TEE_ERROR_PUBLIST_KEY_HASH;
     }
     key_meta_hash = g_keyContext_list.at(pubkey_list_hash)->key_meta_hash;
+    server_pubkey = g_keyContext_list.at(pubkey_list_hash)->server_pubkey;
     g_list_mutex.unlock();
 
     // Combine the hash of the public key list and the hash of the key meta
     pubkey_and_meta = safeheron::encode::hex::DecodeFromHex(pubkey_list_hash);
     pubkey_and_meta += safeheron::encode::hex::DecodeFromHex(key_meta_hash);
+    pubkey_and_meta += safeheron::encode::hex::DecodeFromHex(server_pubkey);
 
     // Hash the combined string
     if (!sha256_hash(pubkey_and_meta, total_hash_hex)) {

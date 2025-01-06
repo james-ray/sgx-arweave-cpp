@@ -64,6 +64,7 @@ struct KeyShardContext {
     long finished_time;
     eKeyStatus key_status;
     std::string key_meta_hash;
+    std::string server_pubkey;
 };
 
 #endif //_TASK_CONSTANT_H_

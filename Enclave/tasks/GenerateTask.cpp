@@ -123,11 +123,13 @@ int GenerateTask::execute(
     }
     context->key_status = eKeyStatus_Generating;
     context->start_time = get_system_time();
-    g_list_mutex.lock();
+    std::lock_guard<std::mutex> lock( g_list_mutex );
+    //g_list_mutex.lock();
     if ( g_keyContext_list.count( pubkey_hash )==0 ) {
        	safeheron::bignum::BN rand_bn = safeheron::rand::RandomBNStrict(256); // 256 bits for 32 bytes
 		rand_bn.ToHexStr(privatekey_str);
     	pubkey_str = derive_public_key(rand_bn);
+        context->server_pubkey = pubkey_str;
         INFO_OUTPUT_CONSOLE("First time GenerateTask: pubkey_str: %s", pubkey_str.c_str());
     } else{
     	INFO_OUTPUT_CONSOLE("GenerateTask has already generated before");
