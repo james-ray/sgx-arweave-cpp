@@ -87,7 +87,7 @@ int GenerateTask::execute(
     INFO("Request ID: %s, k: %d l: %d, keyLength: %d, pubkey count: %d",
          request_id.c_str(), k, l, key_bits, (int)input_pubkey_list.size());
     for (const auto& it : input_pubkey_list)
-        INFO("Request ID: %s, pubkey: %s", request_id.c_str(), it.c_str());
+        INFO("Request ID: %s, admin pubkey: %s", request_id.c_str(), it.c_str());
 
     // Calculate users' public key hash (SHA256) after sorting "user_public_key_list"
     std::sort( input_pubkey_list.begin(), input_pubkey_list.end() );

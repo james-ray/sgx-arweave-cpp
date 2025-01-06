@@ -141,7 +141,7 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
     }else{
       	result_json["server_public_key"] = json::value(g_public_key);
     }
-
+	INFO_OUTPUT_CONSOLE("Request ID: %s, g_public_key is %s", request_id.c_str(), g_public_key.c_str());
     // Generate enclave quote
     if ((ret = msg_handler::GenerateEnclaveReport(request_id, pubkey_list_hash, enclave_report)) != 0) {
         ERROR("Request ID: %s,  msg_handler::GenerateEnclaveReport() failed! pubkey_list_hash: %s, ret: %d",
