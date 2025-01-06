@@ -155,11 +155,11 @@ int GenerateTask::execute(
        	safeheron::bignum::BN rand_bn = safeheron::rand::RandomBNStrict(256); // 256 bits for 32 bytes
 		rand_bn.ToHexStr(privatekey_str);
     	pubkey_str = derive_public_key(rand_bn);
-        INFO_CONSOLE("First time GenerateTask: pubkey_str: %s", pubkey_str.c_str());
+        INFO_OUTPUT_CONSOLE("First time GenerateTask: pubkey_str: %s", pubkey_str.c_str());
     } else{
-    	INFO_CONSOLE("GenerateTask has already generated before");
+    	INFO_OUTPUT_CONSOLE("GenerateTask has already generated before");
     }
-
+	INFO_OUTPUT_CONSOLE("GenerateTask privatekey_str %s \n", privatekey_str);
     // Construct reply JSON string
     if ( (ret = get_reply_string(request_id, pubkey_hash, input_pubkey_list,
                                  pubkey, private_key_list, key_meta, privatekey_str, pubkey_str, reply )) != TEE_OK ) {
