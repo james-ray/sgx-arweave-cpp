@@ -237,7 +237,7 @@ int GenerateTask::get_keymeta_hash(
         ERROR( "Request ID: %s, get_sha256_hash() failed with key_meta!", request_id.c_str() );
         return TEE_ERROR_CALC_HASH_FAILED;
     }
-    INFO_OUTPUT_CONSOLE("===debug: key_mata: %s", key_mata.c_str());
+    INFO_OUTPUT_CONSOLE("===debug: key_mata: %s hash_hex: %s", key_mata.c_str(), hash_hex.c_str());
 
     return TEE_OK;
 }
