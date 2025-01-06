@@ -140,6 +140,7 @@ static int GenerateKeyShard_Task(void *keyshard_param) {
     	}
     }else{
       	result_json["server_public_key"] = json::value(g_public_key);
+        result_json.erase("server_private_key");
     }
 	INFO_OUTPUT_CONSOLE("Request ID: %s, g_public_key is %s", request_id.c_str(), g_public_key.c_str());
     // Generate enclave quote
