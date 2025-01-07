@@ -130,9 +130,9 @@ int GenerateTask::execute(
             rand_bn.ToHexStr(privatekey_str);
             pubkey_str = derive_public_key(rand_bn);
             context->server_pubkey = pubkey_str;
-            INFO_OUTPUT_CONSOLE("First time GenerateTask: pubkey_str: %s", pubkey_str.c_str());
+            INFO_OUTPUT_CONSOLE("First time GenerateTask: pubkey_str: %s", context->server_pubkey.c_str());
         } else {
-            INFO_OUTPUT_CONSOLE("GenerateTask has already generated before");
+            INFO_OUTPUT_CONSOLE("GenerateTask has already generated before, pubkey str: %s", context->server_pubkey.c_str());
         }
 
         g_keyContext_list.insert(std::pair<std::string, KeyShardContext*>(pubkey_hash, context));

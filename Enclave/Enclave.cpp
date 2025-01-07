@@ -202,6 +202,7 @@ int ecall_create_report(
 
     INFO_OUTPUT_CONSOLE("DEBUG---- Request ID: %s, pubkey_list_hash: %s", request_id, pubkey_list_hash);
     INFO_OUTPUT_CONSOLE("DEBUG---- Request ID: %s, key_meta_hash: %s", request_id, key_meta_hash.c_str());
+    INFO_OUTPUT_CONSOLE("DEBUG---- Request ID: %s, server_pubkey: %s", request_id, server_pubkey.c_str());
     // Convert hex string to bytes, and put it into report's user data
     total_hash = safeheron::encode::hex::DecodeFromHex(total_hash_hex);
     memcpy(report_data.d, total_hash.c_str(), 32);
