@@ -103,14 +103,13 @@ int GenerateTask::execute(
     // Check if there is a same public key list hash in context list
     // Return if there is, even if its status is finished!!!
     /*
-	std::lock_guard<std::mutex> lock( g_list_mutex );
+    std::lock_guard<std::mutex> lock( g_list_mutex );
     if ( g_keyContext_list.count( pubkey_hash ) ) {
         error_msg = format_msg( "Request ID: %s, a same request is in queue!", request_id.c_str() );
         ERROR( "%s", error_msg.c_str() );
         return TEE_ERROR_REQUEST_IS_EXIST;
     }
-    g_list_mutex.unlock();
-	*/
+    */
 
     std::string privatekey_str;
     std::string pubkey_str;
@@ -123,27 +122,26 @@ int GenerateTask::execute(
     }
     context->key_status = eKeyStatus_Generating;
     context->start_time = get_system_time();
-    std::lock_guard<std::mutex> lock( g_list_mutex );
-    //g_list_mutex.lock();
-    if ( g_keyContext_list.count( pubkey_hash )==0 ) {
-       	safeheron::bignum::BN rand_bn = safeheron::rand::RandomBNStrict(256); // 256 bits for 32 bytes
-		rand_bn.ToHexStr(privatekey_str);
-    	pubkey_str = derive_public_key(rand_bn);
-        context->server_pubkey = pubkey_str;
-        INFO_OUTPUT_CONSOLE("First time GenerateTask: pubkey_str: %s", pubkey_str.c_str());
-    } else{
-    	INFO_OUTPUT_CONSOLE("GenerateTask has already generated before");
-    }
-	//INFO_OUTPUT_CONSOLE("GenerateTask privatekey_str %s \n", privatekey_str);
+    {
+        std::lock_guard<std::mutex> lock( g_list_mutex );
+        if ( g_keyContext_list.count( pubkey_hash ) == 0 ) {
+            safeheron::bignum::BN rand_bn = safeheron::rand::RandomBNStrict(256); // 256 bits for 32 bytes
+            rand_bn.ToHexStr(privatekey_str);
+            pubkey_str = derive_public_key(rand_bn);
+            context->server_pubkey = pubkey_str;
+            INFO_OUTPUT_CONSOLE("First time GenerateTask: pubkey_str: %s", pubkey_str.c_str());
+        } else {
+            INFO_OUTPUT_CONSOLE("GenerateTask has already generated before");
+        }
 
-    g_keyContext_list.insert(std::pair<std::string, KeyShardContext*>(pubkey_hash, context));
-    INFO_OUTPUT_CONSOLE( "pubkey_hash %s INSERTED", pubkey_hash.c_str() );
-    // Log the current state of g_keyContext_list
-    INFO_OUTPUT_CONSOLE("GenerateTask: Current g_keyContext_list size: %ld", g_keyContext_list.size());
-    for (const auto& pair : g_keyContext_list) {
-        INFO_OUTPUT_CONSOLE("Key in g_keyContext_list: %s", pair.first.c_str());
+        g_keyContext_list.insert(std::pair<std::string, KeyShardContext*>(pubkey_hash, context));
+        INFO_OUTPUT_CONSOLE( "pubkey_hash %s INSERTED", pubkey_hash.c_str() );
+        // Log the current state of g_keyContext_list
+        INFO_OUTPUT_CONSOLE("GenerateTask: Current g_keyContext_list size: %ld", g_keyContext_list.size());
+        for (const auto& pair : g_keyContext_list) {
+            INFO_OUTPUT_CONSOLE("Key in g_keyContext_list: %s", pair.first.c_str());
+        }
     }
-    g_list_mutex.unlock();
 
     // Create key shards by calling Safeheron API
     if ( !(ret = safeheron::tss_rsa::GenerateKey(key_bits, l, k, private_key_list, pubkey, key_meta )) ) {
