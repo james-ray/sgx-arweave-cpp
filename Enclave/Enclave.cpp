@@ -175,15 +175,16 @@ int ecall_create_report(
     FUNC_BEGIN;
 
     // Get the key meta hash string from key context list
-    std::lock_guard <std::mutex> lock(g_list_mutex);
-    if (!g_keyContext_list.count(pubkey_list_hash)) {
-        ERROR("Request ID: %s, Input pubkey list hash is not exist! pubkey_list_hash: %s", request_id,
-              pubkey_list_hash);
-        return TEE_ERROR_PUBLIST_KEY_HASH;
+    {
+        std::lock_guard<std::mutex> lock(g_list_mutex);
+        if (!g_keyContext_list.count(pubkey_list_hash)) {
+            ERROR("Request ID: %s, Input pubkey list hash is not exist! pubkey_list_hash: %s", request_id,
+                  pubkey_list_hash);
+            return TEE_ERROR_PUBLIST_KEY_HASH;
+        }
+        key_meta_hash = g_keyContext_list.at(pubkey_list_hash)->key_meta_hash;
+        server_pubkey = g_keyContext_list.at(pubkey_list_hash)->server_pubkey;
     }
-    key_meta_hash = g_keyContext_list.at(pubkey_list_hash)->key_meta_hash;
-    server_pubkey = g_keyContext_list.at(pubkey_list_hash)->server_pubkey;
-    g_list_mutex.unlock();
 
     // Combine the hash of the public key list and the hash of the key meta
     pubkey_and_meta = safeheron::encode::hex::DecodeFromHex(pubkey_list_hash);
@@ -215,9 +216,10 @@ int ecall_create_report(
     _exit:
     // update context status
     // if no error, the next step is post result by callback
-    g_list_mutex.lock();
-    g_keyContext_list.at(pubkey_list_hash)->key_status = (0 != ret) ? eKeyStatus_Error : eKeyStatus_Callback;
-    g_list_mutex.unlock();
+    {
+        std::lock_guard<std::mutex> lock(g_list_mutex);
+        g_keyContext_list.at(pubkey_list_hash)->key_status = (0 != ret) ? eKeyStatus_Error : eKeyStatus_Callback;
+    }
 
     FUNC_END;
 
