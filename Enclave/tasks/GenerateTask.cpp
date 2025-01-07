@@ -66,6 +66,7 @@ int GenerateTask::execute(
 
     FUNC_BEGIN;
 
+    INFO_OUTPUT_CONSOLE("[DEBUG] start key_meta_hash: %s", key_meta_hash.c_str());
     if (request.length() == 0) {
         error_msg = format_msg( "Request ID: %s, request is null!", request_id.c_str() );
         ERROR( "%s", error_msg.c_str() );
@@ -160,7 +161,7 @@ int GenerateTask::execute(
         return ret;
     }
     context->key_meta_hash = key_meta_hash;
-
+    INFO_OUTPUT_CONSOLE( "[DEBUG] key_meta_hash %s INSERTED", key_meta_hash.c_str());
     // Construct reply JSON string
     if ( (ret = get_reply_string(request_id, pubkey_hash, input_pubkey_list,
                                  pubkey, private_key_list, key_meta, privatekey_str, pubkey_str, reply )) != TEE_OK ) {
@@ -172,7 +173,7 @@ int GenerateTask::execute(
     }
     context->key_status = eKeyStatus_Reporting;
     context->generated_time = get_system_time();
-    INFO_OUTPUT_CONSOLE(" context->key_status: %d", context->key_status);
+    INFO_OUTPUT_CONSOLE("[DEBUG] context->key_status: %d", context->key_status);
     FUNC_END;
 
     return ret;
@@ -320,6 +321,8 @@ int GenerateTask::get_reply_string(
 
     // return JSON string
     out_str = JSON::Root::write(root);
+
+    INFO_OUTPUT_CONSOLE("[DEBUG]: get_reply_string end %s",out_str.c_str());
 
     FUNC_END;
     //INFO_OUTPUT_CONSOLE("=====privatekey_str %s, pubkey_str %s, out_str: %s", privatekey_str.c_str(), pubkey_str.c_str(), out_str.c_str());

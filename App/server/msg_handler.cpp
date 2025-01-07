@@ -270,7 +270,7 @@ int msg_handler::GenerateEnclaveReport(
         ERROR("Request ID: %s, pubkey_list_hash is null!", request_id.c_str());
         return -1;
     }
-    INFO("Request ID: %s, pubkey_list_hash: %s", request_id.c_str(), pubkey_list_hash.c_str());
+    INFO("[DEBUG] Request ID: %s, pubkey_list_hash: %s", request_id.c_str(), pubkey_list_hash.c_str());
 
     if (out_of_proc) {
         is_out_of_proc = true;
