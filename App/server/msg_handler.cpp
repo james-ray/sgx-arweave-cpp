@@ -714,6 +714,7 @@ int msg_handler::QueryRootKey(
     encryption_request_json["private_key_hex"] = web::json::value::string(g_private_key);
     encryption_request_json["remote_public_key_hex"] = web::json::value::string(remote_public_key_hex);
     encryption_request_json["plain_text"] = web::json::value::string(plain_text);
+    encryption_request_json["request_id"] = web::json::value::string(request_id);
     encryption_request_json["signature"] = req_json.at("signature");
     encryption_request_json["timestamp"] = web::json::value::string(timestamp);
     encryption_request_json["msg_digest"] = web::json::value::string(msg_digest);
