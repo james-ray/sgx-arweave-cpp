@@ -136,7 +136,7 @@ int GenerateTask::execute(
             INFO_OUTPUT_CONSOLE("First time GenerateTask: pubkey_str: %s", context->server_pubkey.c_str());
         } else {
             context = g_keyContext_list.at(pubkey_hash);
-            INFO_OUTPUT_CONSOLE("GenerateTask has already generated before, pubkey str: %s", context->server_pubkey.c_str());
+            INFO_OUTPUT_CONSOLE("GenerateTask has already generated before, key_meta_hash %s , pubkey str: %s",context-> context->key_meta_hash.c_str(), context->server_pubkey.c_str());
         }
 
         // Log the current state of g_keyContext_list
