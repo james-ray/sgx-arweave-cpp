@@ -263,7 +263,6 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
     }
 
     // Sign the hash using the local private key
-    std::string signature;
     if (!safeheron::curve::ecdsa::Sign(CurveType::P256, local_private_key, hash_hex, signature)) {
         error_msg = format_msg("Request ID: %s, signing failed!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
