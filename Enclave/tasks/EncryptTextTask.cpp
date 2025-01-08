@@ -261,9 +261,11 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_CALC_HASH_FAILED;
     }
+    // Decode the hex string to bytes
+    std::string hash_bytes = safeheron::encode::hex::DecodeFromHex(hash_hex);
 
     // Sign the hash using the local private key
-    if (!safeheron::curve::ecdsa::Sign(CurveType::P256, local_private_key, hash_hex, signature)) {
+    if (!safeheron::curve::ecdsa::Sign(CurveType::P256, local_private_key, (const uint8_t*)hash_bytes.data(), signature)) {
         error_msg = format_msg("Request ID: %s, signing failed!", request_id.c_str());
         ERROR("%s", error_msg.c_str());
         return TEE_ERROR_SIGN_FAILED;
