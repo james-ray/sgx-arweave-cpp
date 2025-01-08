@@ -254,32 +254,32 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
     std::string encrypted_text = result.second;
 
     // Compute the SHA-256 hash of the concatenated string
-    std::string concatenated = encrypted_aes_key + encrypted_text + request_id;
-    std::string hash_hex;
-    if (!sha256_hash(concatenated, hash_hex)) {
-        error_msg = format_msg("Request ID: %s, sha256_hash() failed!", request_id.c_str());
-        ERROR("%s", error_msg.c_str());
-        return TEE_ERROR_CALC_HASH_FAILED;
-    }
-    // Decode the hex string to bytes
-    std::string hash_bytes = safeheron::encode::hex::DecodeFromHex(hash_hex);
+	std::string concatenated = encrypted_aes_key + encrypted_text + request_id;
+	std::string hash_hex;
+	if (!sha256_hash(concatenated, hash_hex)) {
+    	error_msg = format_msg("Request ID: %s, sha256_hash() failed!", request_id.c_str());
+    	ERROR("%s", error_msg.c_str());
+    	return TEE_ERROR_CALC_HASH_FAILED;
+	}
 
-    // Convert signature to std::vector<uint8_t>
-    std::vector<uint8_t> signature_vec(64); // Assuming the signature size is 64 bytes
-    uint8_t* signature_ptr = signature_vec.data();
+	// Decode the hex string to bytes
+	std::string hash_bytes = safeheron::encode::hex::DecodeFromHex(hash_hex);
 
-    // Sign the hash using the local private key
-    if (!safeheron::curve::ecdsa::Sign(CurveType::P256, local_private_key, (const uint8_t*)hash_bytes.data(), signature_ptr)) {
-        error_msg = format_msg("Request ID: %s, signing failed!", request_id.c_str());
-        ERROR("%s", error_msg.c_str());
-        return TEE_ERROR_SIGN_FAILED;
-    }
+	// Convert signature to std::vector<uint8_t>
+	std::vector<uint8_t> signature_vec(64); // Assuming the signature size is 64 bytes
+	uint8_t* signature_ptr = signature_vec.data();
 
-    // Add the signature to the reply
-    ret = get_reply_string(request_id, encrypted_aes_key, encrypted_text, signature, reply);
+	// Sign the hash using the local private key
+	safeheron::curve::ecdsa::Sign(CurveType::P256, local_private_key, (const uint8_t*)hash_bytes.data(), signature_ptr);
 
-    FUNC_END;
-    return ret;
+	// Encode the signature to a hex string
+	std::string signature_hex = safeheron::encode::hex::EncodeToHex(signature_ptr, signature_vec.size());
+
+	// Add the signature to the reply
+	ret = get_reply_string(request_id, encrypted_aes_key, encrypted_text, signature_hex, reply);
+
+	FUNC_END;
+	return ret;
 }
 
 int EncryptTextTask::get_reply_string(const std::string &request_id, const std::string &encrypted_aes_key,
