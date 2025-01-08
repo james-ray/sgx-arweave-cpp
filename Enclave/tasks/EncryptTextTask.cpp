@@ -253,18 +253,37 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
     std::string encrypted_aes_key = result.first;
     std::string encrypted_text = result.second;
 
-    ret = get_reply_string(request_id, encrypted_aes_key, encrypted_text, reply);
+    // Compute the SHA-256 hash of the concatenated string
+    std::string concatenated = encrypted_aes_key + encrypted_text + request_id;
+    std::string hash_hex;
+    if (!sha256_hash(concatenated, hash_hex)) {
+        error_msg = format_msg("Request ID: %s, sha256_hash() failed!", request_id.c_str());
+        ERROR("%s", error_msg.c_str());
+        return TEE_ERROR_CALC_HASH_FAILED;
+    }
+
+    // Sign the hash using the local private key
+    std::string signature;
+    if (!safeheron::curve::ecdsa::Sign(CurveType::P256, local_private_key, hash_hex, signature)) {
+        error_msg = format_msg("Request ID: %s, signing failed!", request_id.c_str());
+        ERROR("%s", error_msg.c_str());
+        return TEE_ERROR_SIGN_FAILED;
+    }
+
+    // Add the signature to the reply
+    ret = get_reply_string(request_id, encrypted_aes_key, encrypted_text, signature, reply);
 
     FUNC_END;
     return ret;
 }
 
 int EncryptTextTask::get_reply_string(const std::string &request_id, const std::string &encrypted_aes_key,
-                                      const std::string &encrypted_text, std::string &out_str) {
+                                      const std::string &encrypted_text, const std::string &signature, std::string &out_str) {
     JSON::Root reply_json;
     reply_json["success"] = true;
     reply_json["encrypted_aes_key"] = encrypted_aes_key;
     reply_json["encrypted_text"] = encrypted_text;
+    reply_json["sig"] = signature;
     out_str = JSON::Root::write(reply_json);
     return 0;
 }
