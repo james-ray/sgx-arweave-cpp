@@ -134,29 +134,29 @@ int GenerateTask::execute(
             g_keyContext_list.insert(std::pair<std::string, KeyShardContext*>(pubkey_hash, context));
             INFO_OUTPUT_CONSOLE( "pubkey_hash %s INSERTED", pubkey_hash.c_str() );
             INFO_OUTPUT_CONSOLE("First time GenerateTask: pubkey_str: %s", context->server_pubkey.c_str());
-
-            // Create key shards by calling Safeheron API
-            if ( !(ret = safeheron::tss_rsa::GenerateKey(key_bits, l, k, private_key_list, pubkey, key_meta )) ) {
-                error_msg = format_msg( "Request ID: %s, GenerateKey failed!", request_id.c_str() );
-                ERROR( "%s", error_msg.c_str() );
-                context->key_status = eKeyStatus_Error;
-                return false;
-            }
-
-            // Calculate the hash of key meta
-            if ( (ret = get_keymeta_hash( request_id, key_meta, key_meta_hash )) != TEE_OK ) {
-                error_msg = format_msg( "Request ID: %s, get_pubkey_hash() failed with key_mata! ret: 0x%x",
-                                request_id.c_str(), ret );
-                ERROR( "%s", error_msg.c_str() );
-                context->key_status = eKeyStatus_Error;
-                return ret;
-            }
-            context->key_meta_hash = key_meta_hash;
-            INFO_OUTPUT_CONSOLE( "[DEBUG] key_meta_hash %s INSERTED", key_meta_hash.c_str());
         } else {
             context = g_keyContext_list.at(pubkey_hash);
             INFO_OUTPUT_CONSOLE("GenerateTask has already generated before, key_meta_hash %s , pubkey str: %s",context->key_meta_hash.c_str(), context->server_pubkey.c_str());
         }
+
+        // Create key shards by calling Safeheron API
+        if ( !(ret = safeheron::tss_rsa::GenerateKey(key_bits, l, k, private_key_list, pubkey, key_meta )) ) {
+            error_msg = format_msg( "Request ID: %s, GenerateKey failed!", request_id.c_str() );
+            ERROR( "%s", error_msg.c_str() );
+            context->key_status = eKeyStatus_Error;
+            return false;
+        }
+
+        // Calculate the hash of key meta
+        if ( (ret = get_keymeta_hash( request_id, key_meta, key_meta_hash )) != TEE_OK ) {
+            error_msg = format_msg( "Request ID: %s, get_pubkey_hash() failed with key_mata! ret: 0x%x",
+                                request_id.c_str(), ret );
+            ERROR( "%s", error_msg.c_str() );
+            context->key_status = eKeyStatus_Error;
+            return ret;
+        }
+        context->key_meta_hash = key_meta_hash;
+        INFO_OUTPUT_CONSOLE( "[DEBUG] key_meta_hash %s INSERTED", key_meta_hash.c_str());
 
         // Log the current state of g_keyContext_list
         INFO_OUTPUT_CONSOLE("GenerateTask: Current g_keyContext_list size: %ld", g_keyContext_list.size());
