@@ -152,7 +152,6 @@ int ecall_set_generation_status(
         g_keyContext_list.at(pubkey_list_hash)->finished_time = get_system_time();
     }
     g_keyContext_list.at(pubkey_list_hash)->key_status = (eKeyStatus) current_status;
-    g_list_mutex.unlock();
 
     return TEE_OK;
 }

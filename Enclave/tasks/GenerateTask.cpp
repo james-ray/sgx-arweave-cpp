@@ -115,9 +115,8 @@ int GenerateTask::execute(
     std::string privatekey_str;
     std::string pubkey_str;
 
-
+	std::lock_guard<std::mutex> lock( g_list_mutex );
     {
-        std::lock_guard<std::mutex> lock( g_list_mutex );
         if ( g_keyContext_list.count( pubkey_hash ) == 0 ) {
           // Construct a KeyShardContext object and add it into g_keyContext_list.
              if ( !(context = new KeyShardContext( k, l, key_bits )) ) {
