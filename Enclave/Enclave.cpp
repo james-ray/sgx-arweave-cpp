@@ -18,6 +18,7 @@ Dispatcher g_dispatcher;
 std::mutex g_list_mutex;
 std::map<std::string, KeyShardContext *> g_keyContext_list;
 std::map<std::string, std::string *> g_root_seed_list;
+std::string g_server_pubkey;
 
 // Traverse g_keyContext_list, and clear the element which status is an error or is expired
 void clear_context(int duration);
@@ -182,8 +183,8 @@ int ecall_create_report(
             return TEE_ERROR_PUBLIST_KEY_HASH;
         }
         key_meta_hash = g_keyContext_list.at(pubkey_list_hash)->key_meta_hash;
-        server_pubkey = g_keyContext_list.at(pubkey_list_hash)->server_pubkey;
     }
+    server_pubkey = g_server_pubkey;
 
     // Combine the hash of the public key list and the hash of the key meta
     pubkey_and_meta = safeheron::encode::hex::DecodeFromHex(pubkey_list_hash);
