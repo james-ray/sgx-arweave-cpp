@@ -122,6 +122,9 @@ int GenerateTask::execute(
        pubkey_str = derive_public_key(rand_bn);
        g_server_pubkey = pubkey_str;
        INFO_OUTPUT_CONSOLE("First time GenerateTask: pubkey_str: %s", pubkey_str.c_str());
+    } else {
+       pubkey_str = g_server_pubkey;
+       INFO_OUTPUT_CONSOLE("g_server_pubkey generated before: %s", pubkey_str.c_str());
     }
 	std::lock_guard<std::mutex> lock( g_list_mutex );
     {
@@ -140,7 +143,7 @@ int GenerateTask::execute(
             INFO_OUTPUT_CONSOLE( "pubkey_hash %s INSERTED", pubkey_hash.c_str() );
         } else {
             context = g_keyContext_list.at(pubkey_hash);
-            INFO_OUTPUT_CONSOLE("GenerateTask has already generated before, key_meta_hash %s , pubkey str: %s",context->key_meta_hash.c_str(), context->server_pubkey.c_str());
+            INFO_OUTPUT_CONSOLE("GenerateTask has already generated before, key_meta_hash %s ",context->key_meta_hash.c_str());
         }
 
         // Create key shards by calling Safeheron API
