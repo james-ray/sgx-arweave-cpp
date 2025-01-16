@@ -115,7 +115,6 @@ int GenerateTask::execute(
 
     std::string privatekey_str;
     std::string pubkey_str;
-
     if ( g_server_pubkey.empty() ) {
        safeheron::bignum::BN rand_bn = safeheron::rand::RandomBNStrict(256); // 256 bits for 32 bytes
        rand_bn.ToHexStr(privatekey_str);
@@ -126,6 +125,7 @@ int GenerateTask::execute(
        pubkey_str = g_server_pubkey;
        INFO_OUTPUT_CONSOLE("g_server_pubkey generated before: %s", pubkey_str.c_str());
     }
+
 	std::lock_guard<std::mutex> lock( g_list_mutex );
     {
         if ( g_keyContext_list.count( pubkey_hash ) == 0 ) {
@@ -137,8 +137,6 @@ int GenerateTask::execute(
             }
             context->key_status = eKeyStatus_Generating;
             context->start_time = get_system_time();
-
-            context->server_pubkey = pubkey_str;
             g_keyContext_list.insert(std::pair<std::string, KeyShardContext*>(pubkey_hash, context));
             INFO_OUTPUT_CONSOLE( "pubkey_hash %s INSERTED", pubkey_hash.c_str() );
         } else {
