@@ -590,6 +590,34 @@ std::string get_plain_text_for_index(size_t index) {
     return plain_seeds[index];
 }
 
+void update_plain_seeds(size_t index) {
+    // Split g_plain_seeds by comma
+    std::istringstream plain_seeds_stream(g_plain_seeds);
+    std::string plain_text;
+    std::vector<std::string> plain_seeds;
+    while (std::getline(plain_seeds_stream, plain_text, ',')) {
+        plain_seeds.push_back(plain_text);
+    }
+
+    // Check if the index is within bounds
+    if (index >= plain_seeds.size()) {
+        throw std::runtime_error("Index out of bounds in g_plain_seeds");
+    }
+
+    // Update the content at the given index to "fetched"
+    plain_seeds[index] = "fetched";
+
+    // Join the updated plain_seeds back into a single string
+    std::ostringstream updated_plain_seeds_stream;
+    for (size_t i = 0; i < plain_seeds.size(); ++i) {
+        if (i != 0) {
+            updated_plain_seeds_stream << ",";
+        }
+        updated_plain_seeds_stream << plain_seeds[i];
+    }
+    g_plain_seeds = updated_plain_seeds_stream.str();
+}
+
 bool is_timestamp_within_half_hour(const std::string &timestamp_str) {
     // Get the current time in Unix timestamp format
     auto now = std::chrono::system_clock::now();
@@ -658,8 +686,14 @@ int msg_handler::QueryRootKey(
 
     if (g_plain_seeds.empty()){
         ERROR("Request ID: %s, g_plain_seeds is empty!", req_id.c_str());
-        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_plain_seeds is empty.");
+        resp_body = GetMessageReply(false, APP_ERROR_INTERNAL_ERROR, "g_plain_seeds is empty.");
         ret = -1;
+        goto _exit2;
+    }
+    if (g_private_key.empty()) {
+        ERROR("Request ID: %s, g_private_key is empty!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "g_private_key is empty.");
+        ret = APP_ERROR_INTERNAL_ERROR;
         goto _exit2;
     }
 
@@ -670,7 +704,7 @@ int msg_handler::QueryRootKey(
         goto _exit2;
     }
 
-// Check if g_request_ids is empty or if request_id is not found in g_request_ids
+    // Check if g_request_ids is empty or if request_id is not found in g_request_ids
     if (g_request_ids.empty() || g_request_ids.find(request_id) == std::string::npos) {
         ERROR("Request ID: %s, request_id not found in g_request_ids!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "request_id not found.");
@@ -678,7 +712,7 @@ int msg_handler::QueryRootKey(
         goto _exit2;
     }
 
-// Find the index of request_id
+    // Find the index of request_id
     while (std::getline(request_ids_stream, id, ',')) {
         request_ids.push_back(id);
     }
@@ -702,10 +736,10 @@ int msg_handler::QueryRootKey(
         ret = -1;
         goto _exit2;
     }
-    if (g_private_key.empty()) {
-        ERROR("Request ID: %s, g_private_key is empty!", req_id.c_str());
-        resp_body = GetMessageReply(false, APP_ERROR_INTERNAL_ERROR, "g_private_key is empty.");
-        ret = APP_ERROR_INTERNAL_ERROR;
+    if (plain_text == "fetched") {
+        ERROR("Request ID: %s, related seed has already been fetched!", req_id.c_str());
+        resp_body = GetMessageReply(false, APP_ERROR_SEED_IS_FETCHED, "related seed has already been fetched!");
+        ret = APP_ERROR_SEED_IS_FETCHED;
         goto _exit2;
     }
 
@@ -735,14 +769,15 @@ int msg_handler::QueryRootKey(
     if (response_json.has_field("encrypted_aes_key") && response_json.has_field("encrypted_text")) {
         resp_body = response_json.serialize();
         ret = 0;
+        update_plain_seeds(index);
     } else {
         ERROR("Request ID: %s, encryption failed!", req_id.c_str());
         resp_body = GetMessageReply(false, APP_ERROR_INVALID_PARAMETER, "encryption failed.");
         ret = APP_ERROR_INVALID_PARAMETER;
     }
 
+    INFO_OUTPUT_CONSOLE("Request ID: %s, index %d, seed is fetched", req_id.c_str(), index);
     FUNC_END;
-	INFO_OUTPUT_CONSOLE("Request ID: %s, resp_body (pretty): %s", req_id.c_str(), resp_body.c_str());
     _exit2:
     if (result) {
         free(result);

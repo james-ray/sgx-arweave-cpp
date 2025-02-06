@@ -19,6 +19,7 @@
 #define APP_ERROR_SERVER_IS_BUSY            APP_ERROR_BASE + 0x9
 #define APP_ERROR_FAILED_TO_START_THREAD    APP_ERROR_BASE + 0xA
 #define APP_ERROR_INTERNAL_ERROR    APP_ERROR_BASE + 0xB
+#define APP_ERROR_SEED_IS_FETCHED    APP_ERROR_BASE + 0xC
 
 
 typedef struct _ra_errlist_t {

@@ -285,6 +285,7 @@ int EncryptTextTask::execute(const std::string &request_id, const std::string &r
 int EncryptTextTask::get_reply_string(const std::string &request_id, const std::string &encrypted_aes_key,
                                       const std::string &encrypted_text, const std::string &signature, std::string &out_str) {
     JSON::Root reply_json;
+    reply_json["code"] = 200;
     reply_json["success"] = true;
     reply_json["encrypted_aes_key"] = encrypted_aes_key;
     reply_json["encrypted_text"] = encrypted_text;
